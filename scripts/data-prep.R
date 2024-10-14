@@ -3,8 +3,8 @@
 #
 # ### Pacotes necessários
 library(tidyverse)
-library(geobr)
 library(ggridges)
+library(geobr)
 
 # Filtragem para estado de SP ---------------------------------------------
 # ### Base de dados inicial
@@ -30,20 +30,25 @@ library(ggridges)
 #
 #
 #
-# ## Função para classificação do ponto
-# def_pol <- function(x, y, pol){
-#   as.logical(sp::point.in.polygon(point.x = x,
-#                                   point.y = y,
-#                                   pol.x = pol[,1],
-#                                   pol.y = pol[,2]))
-# }
+## Função para classificação do ponto
+def_pol <- function(x, y, pol){
+  as.logical(sp::point.in.polygon(point.x = x,
+                                  point.y = y,
+                                  pol.x = pol[,1],
+                                  pol.y = pol[,2]))
+}
 #
 #
 #
-# ## Retirando os polígono
-# estados <- geobr::read_state(showProgress = FALSE)
-# pol_sp <- estados$geom |> pluck(20) |> as.matrix()
-# plot(pol_sp)
+## Retirando os polígono
+estados <- geobr::read_state(showProgress = FALSE)
+pol_sp <- estados$geom |> pluck(20) |> as.matrix()
+pol_sp <- pol_sp[(183:4742),]
+pol_sp <- rbind(pol_sp, pol_sp[1,])
+head(pol_sp)
+tail(pol_sp)
+plot(pol_sp)
+
 #
 #
 # ## Classificando os pontos
@@ -85,21 +90,16 @@ data_set_sp |>
   geom_point()
 
 # Criando a estação por ano
-season_year <- vector()
-month <- data_set_sp |> pull(month)
-year <- data_set_sp |> pull(year)
-for( i in 1:nrow(data_set_sp)) {
-  if(month[i] <= 2){
-    season_year[i] <- paste0("rainy_",year[i]-1,"-",year[i])
-  }else if(month[i] > 2 & month[i] < 9){
-    season_year[i] <- paste0("dry_",year[i])
-  } else{
-    season_year[i] <- paste0("rainy_",year[i],"-",year[i]+1)
-  }
-}
-data_set_sp$season_year <- season_year
 data_set_sp <- data_set_sp |>
-  filter(season_year != "rainy_2014-2015")
+  mutate(
+    season_year = ifelse(month <= 2, paste0("rainy_",year-2001,":",year-2000),
+                           ifelse(month > 2 & month < 9,
+                                  paste0("dry_",year-2000,":",year-1999),
+                                  paste0("rainy_",year-2000,":",year-1999))),
+    epoch = str_remove(season_year,"dry_|rainy_")
+      ) |>
+  filter(season_year != "rainy_2014-2015",
+         epoch != "14:15")
 glimpse(data_set_sp)
 
 # contar as categorias criadas
@@ -108,28 +108,21 @@ data_set_sp |>
   unique()
 
 #Gráficos
-data_set_sp |>
-  group_by(season_year) |>
-  summarise(
-    xco2_mean = mean(xco2, na.rm = TRUE)
-  ) |>
-  ggplot(aes(x=season_year,y=xco2_mean)) +
-  geom_col()
-
-data_set_sp %>%
-  ggplot(aes(x=xco2,fill=season_year)) +
-  geom_histogram(color="black",
-                 bins = 30)
-
-
 # Histogramas
 data_set_sp %>%
+  ggplot(aes(x=xco2,fill=season)) +
+  geom_histogram(color="black",
+                 bins = 30) +
+  facet_wrap(~epoch)
+
+data_set_sp %>%
   mutate(
-     fct_year = fct_rev(as.factor(year)),
-  #   classe = ifelse(tratamento == "UC_desm" | tratamento == "TI_desm",
+  #   fct_year = fct_rev(as.factor(year)),
+  #   classe = ifelse(tratamento ==
+  #            "UC_desm" | tratamento == "TI_desm",
   #                   "Des","Con")
   ) %>%
-  ggplot(aes(y=fct_year)) +
+  ggplot(aes(y=epoch)) +
   geom_density_ridges(rel_min_height = 0.03,
                       aes(x=xco2, fill=season),
                       alpha = .6, color = "black"
@@ -151,10 +144,23 @@ data_set_sp |>
   ) |>
   writexl::write_xlsx("output/estat-desc.xlsx")
 
+data_set_sp |>
+  group_by(epoch,season) |>
+  summarise(
+    N = length(xco2),
+    MEAN = mean(xco2),
+    MEDIAN = median(xco2),
+    STD_DV = sd(xco2),
+    SKW = agricolae::skewness(xco2),
+    KRT = agricolae::kurtosis(xco2),
+  ) |>
+  writexl::write_xlsx("output/estat-desc-epoch-season.xlsx")
+
+
 # Criar o adensamento de pontos
 x<-data_set_sp$longitude
 y<-data_set_sp$latitude
-dis <- 0.08 #Distância entre pontos
+dis <- 0.05 #Distância entre pontos
 grid <- expand.grid(X=seq(min(x),max(x),dis), Y=seq(min(y),max(y),dis)) %>%
   mutate(flag = def_pol(X,Y,pol_sp)) %>%
   filter(flag) %>% select(-flag)
@@ -163,7 +169,7 @@ plot(grid$X,grid$Y)
 points(x,y,col="red",pch=4)
 
 # Análise geoestatística
-my_season = "rainy_2015-2016"
+my_season = "rainy_15:16"
 data_set_aux  <- data_set_sp |>
   filter(season_year == my_season) |>
   select(longitude, latitude, xco2)
@@ -179,8 +185,8 @@ form <- xco2 ~ 1
 # Criar um semivariograma
 vari_exp <- gstat::variogram(form, data = data_set_aux,
                       cressie = FALSE,
-                      cutoff = 5.4, # distância máxima do semivariograma
-                      width = .05) # distancia entre pontos
+                      cutoff = .55, # distância máxima do semivariograma
+                      width = .03) # distancia entre pontos
 vari_exp  %>%
   ggplot(aes(x=dist, y=gamma)) +
   geom_point() +
@@ -188,8 +194,8 @@ vari_exp  %>%
        y=expression(paste(gamma,"(h)")))
 
 
-patamar=1.5
-alcance=3
+patamar=.85
+alcance=.2
 epepita=0
 modelo_1 <- gstat::fit.variogram(vari_exp,gstat::vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- gstat::fit.variogram(vari_exp,gstat::vgm(patamar,"Exp",alcance,epepita))
@@ -231,11 +237,10 @@ plot(vari_exp,
 plot(vari_exp,model=modelo_2, col=1,pl=F,pch=16,cex=1.2,cex.main=7,ylab=list("Semivariância",cex=1.3),xlab=list("Distância de Separação h (m)",cex=1.3),main =paste("Exp(C0= ",c02,"; C0+C1= ", c0_c12, "; a= ", a2,"; r2 = ", r22,")",sep=""))
 plot(vari_exp,model=modelo_3, col=1,pl=F,pch=16,cex=1.2,cex.main=7,ylab=list("Semivariância",cex=1.3),xlab=list("Distância de Separação h (m)",cex=1.3),main =paste("Gau(C0= ",c03,"; C0+C1= ", c0_c13, "; a= ", a3,"; r2 = ", r23,")",sep=""))
 
-
 ## Validação Cruzada
 conjunto_validacao <- data_set_aux %>%
   as_tibble() %>%
-  sample_n(100)
+  sample_n(200)
 sp::coordinates(conjunto_validacao) = ~longitude + latitude
 modelos<-list(modelo_1,modelo_2,modelo_3)
 for(j in 1:3){
