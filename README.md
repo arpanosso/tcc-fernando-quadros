@@ -13,6 +13,8 @@ library(ggridges)
 library(geobr)
 library(gstat)
 source("r/my-function.R")
+#> Polygons loaded [states, citysbiomes, conservarion and indigenous]
+#> List of polygons loaded [list_pol]
 ```
 
 #### Filtrando os dados para o estado de São Paulo
@@ -21,17 +23,17 @@ Carregando a base geral
 
 ``` r
 data_set <- read_rds("data/nasa-xco2.rds")
-data_set <- data_set |>
-  filter(xco2 > 0) |>
-  mutate(
-    path = str_remove(path, "data-raw/nc4/|\\.nc4"),
-    date = as_date(str_sub(path,12,17)),
-    year = year(date),
-    month = month(date),
-    day = day(date),
-    .after = "time"
-  )
-glimpse(data_set)
+# data_set <- data_set |>
+#   filter(xco2 > 0) |>
+#   mutate(
+#     path = str_remove(path, "data-raw/nc4/|\\.nc4"),
+#     date = as_date(str_sub(path,12,17)),
+#     year = year(date),
+#     month = month(date),
+#     day = day(date),
+#     .after = "time"
+#   )
+# glimpse(data_set)
 ```
 
 Corrigindo o polígono do Estado de São Paulo.
@@ -61,17 +63,17 @@ data_set_sp <- read_rds("data/nasa-xco2-sp.rds")
 #### Existe uma tendência regional nos dados, e ela deve ser retirada
 
 ``` r
-data_set |> 
-  sample_n(1000) |> 
-  drop_na() |> 
-  mutate( year = year - min(year)) |> 
-  ggplot(aes(x=year, y=xco2)) + 
-  geom_point() + 
-  geom_point(shape=21,color="black",fill="gray") + 
-  geom_smooth(method = "lm") + 
-  ggpubr::stat_regline_equation(ggplot2::aes(
-  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) + 
-  theme_bw() 
+# data_set |> 
+#   sample_n(1000) |> 
+#   drop_na() |> 
+#   mutate( year = year - min(year)) |> 
+#   ggplot(aes(x=year, y=xco2)) + 
+#   geom_point() + 
+#   geom_point(shape=21,color="black",fill="gray") + 
+#   geom_smooth(method = "lm") + 
+#   ggpubr::stat_regline_equation(ggplot2::aes(
+#   label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) + 
+#   theme_bw() 
 ```
 
 #### Análise de regressão linear simples para caracterização da tendência.
@@ -84,6 +86,14 @@ mod_trend_xco2 <- lm(xco2 ~ year,
             mutate( year = year - min(year)) 
           )
 mod_trend_xco2
+#> 
+#> Call:
+#> lm(formula = xco2 ~ year, data = mutate(drop_na(filter(data_set, 
+#>     xco2_quality_flag == 0)), year = year - min(year)))
+#> 
+#> Coefficients:
+#> (Intercept)         year  
+#>     397.108        2.343
 
 a_co2 <- mod_trend_xco2$coefficients[[1]]
 b_co2 <- mod_trend_xco2$coefficients[[2]]
@@ -133,6 +143,8 @@ data_set_sp %>%
   theme_ridges()
 ```
 
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
 ``` r
 data_set_sp |>
   group_by(season_year) |>
@@ -159,6 +171,8 @@ data_set_sp |>
   labs(fill="") +
   scale_fill_viridis_d(option = "A")
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ### 3) Análise Geoestatística
 
@@ -257,6 +271,8 @@ citys |>
   )
 ```
 
+![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
 #### Definição do gradeado adensado.
 
 ``` r
@@ -320,6 +336,8 @@ vari_exp  |>
        y=expression(paste(gamma,"(h)")))
 ```
 
+![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
 #### PASSO 3) Ajuste dos modelos matemáticos teóricos ao semivariograma experimental
 
 ``` r
@@ -332,7 +350,8 @@ modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
 plot_my_models(modelo_1,modelo_2,modelo_3)
 ```
 
-#### PASSO 4) Escolha do melhor modelo
+![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-17-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-17-3.png)<!-- -->
+\#### PASSO 4) Escolha do melhor modelo
 
 O melhor modelo é aquele que apresenta um coeficiente de regressão o
 mais próximo de 01 e o interesepto o mais próximo de 0.
@@ -361,7 +380,165 @@ for(j in 1:3){
   abline(lm(obs~est));
   abline(0,1,lty=3)
 }
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+
+![](README_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->
+
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+
+![](README_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
 
 #### PASSO 5) Definido o melhor modelo, precisamos guardar os valores.
 
@@ -377,13 +554,18 @@ a <- ifelse(model == "Gau", round(modelo$range[[2]]*(3^.5),2),
             round(modelo$range[[2]],2)))
 
 
-predict(vari_exp,modelo)
-```
+r2 <- vari_exp |> add_column( model = model, a=a, c0 = c0,
+                                  c0_c1 = c0_c1) |> 
+    mutate(
+      gamma_m = ifelse(model == "Sph",
+        ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-3*(dist/a)^2)))),
+      residuo_total = (gamma-mean(gamma))^2,
+      residuo_mod = (gamma - gamma_m)^2
+    ) |>
+    summarise(
+      r2=(sum(residuo_total) - sum(residuo_mod))/sum(residuo_total)
+    ) |> pull(r2)
 
-``` r
-r2 <- ifelse(model == "Gau", r23,
-            ifelse(model == "Exp",r22,
-            r21)) |> pluck(1)
 tibble(
   my_season, model, c0, c0_c1, a, rss, r2
 ) |> mutate(gde = c0/c0_c1, .after = "a") |>
@@ -398,6 +580,8 @@ png(filename = paste0("output/semivariogram-img/semivar-",
     width = 800, height = 600)
 plot(vari_exp,model=modelo,cex.lab=2, col=1,pl=F,pch=16,cex=2.2,ylab=list("Semivariância",cex=2.3),xlab=list("Distância de Separação h (m)",cex=2.3,cex.axis=4))
 dev.off()
+#> png 
+#>   2
 ```
 
 #### Passo 6 - Krigagem Ordinária - interpolação em locais não amostrados
@@ -409,12 +593,14 @@ ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
                      na.action=na.pass,
                      debug.level=-1
 )
+#> [using ordinary kriging]
+#>   0% done 15% done 29% done 42% done 56% done 71% done 86% done100% done
 ```
 
 #### Passo 7 - Visualização dos padrões espaciais e armazenamento dos dados e imagem.
 
 ``` r
-mapa <- as.tibble(ko_variavel) |>
+mapa <- as_tibble(ko_variavel) |>
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = var1.pred)) +
   scale_fill_viridis_c() +
@@ -424,6 +610,11 @@ mapa <- as.tibble(ko_variavel) |>
        fill="xco2") +
   theme_bw()
 mapa
+```
+
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+
+``` r
 ggsave(paste0("output/maps-kgr/kgr-xco2-",str_replace(my_season,"\\:","_"),".png"), plot = mapa, width = 10, height = 8, dpi = 300)
 df <- ko_variavel |>
   as_tibble() |>

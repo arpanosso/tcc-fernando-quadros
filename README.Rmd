@@ -10,7 +10,7 @@ knitr::opts_chunk$set(
   warning = FALSE,
   error = FALSE,
   message = FALSE,
-  eval = FALSE,
+  eval = TRUE,
   comment = "#>"
 )
 ```
@@ -33,17 +33,17 @@ source("r/my-function.R")
 Carregando a base geral
 ```{r}
 data_set <- read_rds("data/nasa-xco2.rds")
-data_set <- data_set |>
-  filter(xco2 > 0) |>
-  mutate(
-    path = str_remove(path, "data-raw/nc4/|\\.nc4"),
-    date = as_date(str_sub(path,12,17)),
-    year = year(date),
-    month = month(date),
-    day = day(date),
-    .after = "time"
-  )
-glimpse(data_set)
+# data_set <- data_set |>
+#   filter(xco2 > 0) |>
+#   mutate(
+#     path = str_remove(path, "data-raw/nc4/|\\.nc4"),
+#     date = as_date(str_sub(path,12,17)),
+#     year = year(date),
+#     month = month(date),
+#     day = day(date),
+#     .after = "time"
+#   )
+# glimpse(data_set)
 ```
 Corrigindo o polígono do Estado de São Paulo.
 ```{r}
@@ -68,17 +68,17 @@ data_set_sp <- read_rds("data/nasa-xco2-sp.rds")
 ```
 #### Existe uma tendência regional nos dados, e ela deve ser retirada
 ```{r}
-data_set |> 
-  sample_n(1000) |> 
-  drop_na() |> 
-  mutate( year = year - min(year)) |> 
-  ggplot(aes(x=year, y=xco2)) + 
-  geom_point() + 
-  geom_point(shape=21,color="black",fill="gray") + 
-  geom_smooth(method = "lm") + 
-  ggpubr::stat_regline_equation(ggplot2::aes(
-  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) + 
-  theme_bw() 
+# data_set |> 
+#   sample_n(1000) |> 
+#   drop_na() |> 
+#   mutate( year = year - min(year)) |> 
+#   ggplot(aes(x=year, y=xco2)) + 
+#   geom_point() + 
+#   geom_point(shape=21,color="black",fill="gray") + 
+#   geom_smooth(method = "lm") + 
+#   ggpubr::stat_regline_equation(ggplot2::aes(
+#   label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) + 
+#   theme_bw() 
 ```
 
 #### Análise de regressão linear simples para caracterização da tendência.
@@ -385,14 +385,18 @@ a <- ifelse(model == "Gau", round(modelo$range[[2]]*(3^.5),2),
             round(modelo$range[[2]],2)))
 
 
-predict(vari_exp,modelo)
-```
+r2 <- vari_exp |> add_column( model = model, a=a, c0 = c0,
+                                  c0_c1 = c0_c1) |> 
+    mutate(
+      gamma_m = ifelse(model == "Sph",
+        ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-3*(dist/a)^2)))),
+      residuo_total = (gamma-mean(gamma))^2,
+      residuo_mod = (gamma - gamma_m)^2
+    ) |>
+    summarise(
+      r2=(sum(residuo_total) - sum(residuo_mod))/sum(residuo_total)
+    ) |> pull(r2)
 
-
-```{r}
-r2 <- ifelse(model == "Gau", r23,
-            ifelse(model == "Exp",r22,
-            r21)) |> pluck(1)
 tibble(
   my_season, model, c0, c0_c1, a, rss, r2
 ) |> mutate(gde = c0/c0_c1, .after = "a") |>
@@ -420,7 +424,7 @@ ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
 #### Passo 7 - Visualização dos padrões espaciais e armazenamento dos dados e imagem.
 
 ```{r}
-mapa <- as.tibble(ko_variavel) |>
+mapa <- as_tibble(ko_variavel) |>
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = var1.pred)) +
   scale_fill_viridis_c() +
