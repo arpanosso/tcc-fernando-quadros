@@ -1,4 +1,436 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-## TCC - Fernando Quadros
+## TCC - Fernando Quadros - Variação da concentração de CO<sub>2</sub> atmosférica no estado de São Paulo: Abordagem de Séries temporais e geoestatística
+
+### 1) Preparo dos dados
+
+#### Carregando pacotes
+
+``` r
+library(tidyverse)
+library(ggridges)
+library(geobr)
+library(gstat)
+source("r/my-function.R")
+```
+
+#### Filtrando os dados para o estado de São Paulo
+
+Carregando a base geral
+
+``` r
+data_set <- read_rds("data/nasa-xco2.rds")
+data_set <- data_set |>
+  filter(xco2 > 0) |>
+  mutate(
+    path = str_remove(path, "data-raw/nc4/|\\.nc4"),
+    date = as_date(str_sub(path,12,17)),
+    year = year(date),
+    month = month(date),
+    day = day(date),
+    .after = "time"
+  )
+glimpse(data_set)
+```
+
+Corrigindo o polígono do Estado de São Paulo.
+
+``` r
+pol_sp <- states |> filter(abbrev_state == "SP") |> 
+  pull(geom) |> 
+  pluck(1) |> 
+  as.matrix()
+pol_sp <- pol_sp[(183:4742),]
+pol_sp <- rbind(pol_sp, pol_sp[1,])
+# plot(pol_sp)
+```
+
+Classificando os pontos pertencentes ao estado
+
+``` r
+# data_set_sp <- data_set |>
+#   mutate(
+#     flag_sp = def_pol(longitude, latitude, pol_sp)
+#   ) |>
+#   filter(flag_sp)
+# write_rds(data_set_sp,"data/nasa-xco2-sp.rds")
+data_set_sp <- read_rds("data/nasa-xco2-sp.rds")
+```
+
+#### Existe uma tendência regional nos dados, e ela deve ser retirada
+
+``` r
+data_set |> 
+  sample_n(1000) |> 
+  drop_na() |> 
+  mutate( year = year - min(year)) |> 
+  ggplot(aes(x=year, y=xco2)) + 
+  geom_point() + 
+  geom_point(shape=21,color="black",fill="gray") + 
+  geom_smooth(method = "lm") + 
+  ggpubr::stat_regline_equation(ggplot2::aes(
+  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) + 
+  theme_bw() 
+```
+
+#### Análise de regressão linear simples para caracterização da tendência.
+
+``` r
+mod_trend_xco2 <- lm(xco2 ~ year, 
+          data = data_set |> 
+            filter(xco2_quality_flag == 0) |> 
+            drop_na() |> 
+            mutate( year = year - min(year)) 
+          )
+mod_trend_xco2
+
+a_co2 <- mod_trend_xco2$coefficients[[1]]
+b_co2 <- mod_trend_xco2$coefficients[[2]]
+
+data_set_sp <- data_set_sp |>
+  filter(xco2_quality_flag == 0,
+         year >= 2015 & year <= 2023) |> 
+  mutate(
+    year_modif = year -min(year),
+    xco2_est = a_co2+b_co2*year_modif,
+    delta = xco2_est-xco2,
+    xco2_detrend = (a_co2-delta) - (mean(xco2) - a_co2)
+  ) |> 
+  select(-c(flag_br:flag_sp, time, xco2_quality_flag,xco2_incerteza,
+           path,year_modif:delta)) |> 
+  rename(xco2_trend = xco2,
+         xco2 = xco2_detrend) |> 
+    mutate(
+      season = ifelse(month <=2 | month >=9,"rainy","dry"),
+      season_year = ifelse(month <= 2,
+                           paste0("rainy_",year-2001,":",year-2000),
+                           ifelse(month > 2 & month < 9,
+                                  paste0("dry_",year-2000,":",year-1999),                                  paste0("rainy_",year-2000,":",year-1999))),
+      epoch = str_remove(season_year,"dry_|rainy_")) |> 
+    filter(season_year != "rainy_2014-2015",
+         epoch != "14:15")
+  
+```
+
+### 2) Análise Estatística Básica
+
+``` r
+data_set_sp %>%
+  mutate(
+  #   fct_year = fct_rev(as.factor(year)),
+  #   classe = ifelse(tratamento ==
+  #            "UC_desm" | tratamento == "TI_desm",
+  #                   "Des","Con")
+  ) %>%
+  ggplot(aes(y=epoch)) +
+  geom_density_ridges(rel_min_height = 0.03,
+                      aes(x=xco2, fill=season),
+                      alpha = .6, color = "black"
+  ) +
+  scale_fill_cyclical(values = c("#ff8080","#238B45"),
+                      name = "classe", guide = "legend") +
+  theme_ridges()
+```
+
+``` r
+data_set_sp |>
+  group_by(season_year) |>
+  summarise(
+    N = length(xco2),
+    MEAN = mean(xco2),
+    MEDIAN = median(xco2),
+    STD_DV = sd(xco2),
+    SKW = agricolae::skewness(xco2),
+    KRT = agricolae::kurtosis(xco2),
+  ) |>
+  writexl::write_xlsx("output/estat-desc.xlsx")
+
+data_set_sp |>
+  group_by(epoch, season) |> 
+   # summarise(
+   #  xco2 = mean(xco2)) |> 
+  ggplot(aes(x=epoch, y=xco2, fill = season)) +
+  # geom_col(position = "dodge") +
+  geom_boxplot() +
+  coord_cartesian(ylim = c(380,395))+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  labs(fill="") +
+  scale_fill_viridis_d(option = "A")
+```
+
+### 3) Análise Geoestatística
+
+A definição do grid a ser estimado para pontos não amostrados para o
+estado de SP.
+
+``` r
+# vetores para coordenadas x e y selecionadas da base do IBGE1
+# x<-pol_sp[,1]
+# y<-pol_sp[,2]
+# dis <- 0.05 # distância para o adensamento de pontos nos estados
+# grid_geral <- expand.grid(
+#   X=seq(min(x),max(x),dis), 
+#   Y=seq(min(y),max(y),dis))
+```
+
+É necessário classificar cada ponto como pertencente ou não ao estado de
+SP.
+
+``` r
+# grid_geral <- grid_geral |>
+#    mutate(
+#      flag = def_pol(X,Y,pol_sp)
+#    ) |> 
+#     filter(flag) |> 
+#   select(-flag)
+# 
+# grid_geral |> 
+#   ggplot(aes(X,Y)) +
+#   geom_point()
+```
+
+``` r
+# x_ge <- grid_geral$X
+# y_ge <- grid_geral$Y
+# v_city <- ""
+# obj <- citys |> filter(abbrev_state == "SP")
+# name_muni <- citys |> filter(abbrev_state == "SP") |> pull(name_muni)  
+# for(i in 1:nrow(grid_geral)){  
+#   for(j in seq_along(name_muni)){
+#     pol <- obj$geom |> pluck(j) |> as.matrix()
+#     lgv <- def_pol(x_ge[i],y_ge[i],pol)
+#     if(lgv){
+#       v_city[i] <- name_muni[j]
+#       break
+#     }
+#   }
+# }
+# grid_geral_city <- grid_geral |>
+#    add_column(
+#      city = v_city
+#    )
+```
+
+``` r
+# Encontrando os pontos mais próximos para os refugos
+# refugos <- grid_geral_city |>
+#    filter(is.na(city))
+#  
+# x_ge_nref <- grid_geral_city |> filter(!is.na(city)) |>
+#    pull(X)
+# y_ge_nref <- grid_geral_city |> filter(!is.na(city)) |>
+#   pull(Y)
+# c_ge_nref <- grid_geral_city |> filter(!is.na(city)) |>
+#   pull(city)
+# 
+# x_ref <- refugos |> pull(X)
+# y_ref <- refugos |> pull(Y)
+# city_ref <- 0
+# for(i in 1:nrow(refugos)){
+#   dist_vec = sqrt((x_ref[i]-x_ge_nref)^2+(y_ref[i]-y_ge_nref)^2)
+#   i_min <- which(dist_vec == min(dist_vec))[1]
+#   city_ref[i] <- c_ge_nref[i_min]
+# }
+# 
+# refugos$city <- city_ref
+#  
+# grid_geral_city <- grid_geral_city |>
+#   filter(!is.na(city)) |>
+#   rbind(refugos)
+# 
+# write_rds(grid_geral_city,"data/grid-city.rds")
+
+grid_geral <- read_rds("data/grid-city.rds")
+citys |> 
+  filter(abbrev_state == "SP") |> 
+   ggplot() +
+     geom_sf(aes_string(), color="black",
+              size=.05, show.legend = TRUE) +
+  theme_minimal() +
+  geom_point(
+    data = grid_geral |> 
+  sample_n(1000),
+  aes(X,Y),
+  color = "red"
+  )
+```
+
+#### Definição do gradeado adensado.
+
+``` r
+grid <- grid_geral |> 
+  select(X, Y)
+sp::gridded(grid) = ~ X + Y
+```
+
+#### PASSO 1)
+
+“dry_15:16” “rainy_15:16” “dry_16:17” “rainy_16:17”  
+“dry_17:18” “rainy_17:18” “dry_18:19” “rainy_18:19”  
+“dry_19:20” “rainy_19:20” “dry_20:21” “rainy_20:21”  
+“dry_21:22” “rainy_21:22” “dry_22:23” “rainy_22:23”  
+“dry_23:24” “rainy_23:24”
+
+``` r
+my_season = "rainy_15:16"
+data_set_aux  <- data_set_sp |>
+  filter(
+    season_year == my_season) |>
+  dplyr::select(longitude, latitude, xco2)
+
+vct_xco2 <- vector();dist_xco2 <- vector();
+lon_grid <- vector();lat_grid <- vector();
+for(i in 1:nrow(data_set_aux)){
+  d <- sqrt((data_set_aux$longitude[i] - grid$X)^2 + 
+              (data_set_aux$lat[i] - grid$Y)^2
+  )
+  min_index <- order(d)[1]
+  vct_xco2[i] <- data_set_aux$xco2[min_index]
+  dist_xco2[i] <- d[order(d)[1]]
+  lon_grid[i] <- grid$X[min_index]
+  lat_grid[i] <- grid$Y[min_index]
+}
+data_set_aux$dist_xco2 <- dist_xco2
+data_set_aux$xco2_new <- vct_xco2
+data_set_aux$lon_grid <- lon_grid
+data_set_aux$lat_grid <- lat_grid
+data_set_aux |> 
+  group_by(lon_grid,lat_grid) |> 
+  summarise(
+    xco2 = mean(xco2)
+  ) |> 
+  rename(longitude = lon_grid, latitude = lat_grid) -> data_set_aux
+sp::coordinates(data_set_aux) = ~ longitude + latitude
+```
+
+#### PASSO 2 - Construção do Semivariograma Experimental
+
+``` r
+form <- xco2 ~ 1
+vari_exp <- gstat::variogram(form, data = data_set_aux,
+                      cressie = FALSE,
+                      cutoff = 4, # distância máxima 8
+                      width = .5) # distancia entre pontos
+vari_exp  |>
+  ggplot(aes(x=dist, y=gamma)) +
+  geom_point() +
+  labs(x="lag (º)",
+       y=expression(paste(gamma,"(h)")))
+```
+
+#### PASSO 3) Ajuste dos modelos matemáticos teóricos ao semivariograma experimental
+
+``` r
+patamar=2
+alcance=1
+epepita=0
+modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
+plot_my_models(modelo_1,modelo_2,modelo_3)
+```
+
+#### PASSO 4) Escolha do melhor modelo
+
+O melhor modelo é aquele que apresenta um coeficiente de regressão o
+mais próximo de 01 e o interesepto o mais próximo de 0.
+
+``` r
+conjunto_validacao <- data_set_aux |>
+  as_tibble() |>
+  sample_n(50)
+sp::coordinates(conjunto_validacao) = ~longitude + latitude
+modelos<-list(modelo_1,modelo_2,modelo_3)
+for(j in 1:3){
+  est<-0
+  for(i in 1:nrow(conjunto_validacao)){
+    valid <- gstat::krige(formula=form, conjunto_validacao[-i,], conjunto_validacao, model=modelos[[j]])
+    est[i]<-valid$var1.pred[i]
+  }
+  obs<-as.data.frame(conjunto_validacao)[,3]
+  RMSE<-round((sum((obs-est)^2)/length(obs))^.5,3)
+  mod<-lm(obs~est)
+  b<-round(mod$coefficients[2],3)
+  se<-round(summary(mod)$coefficients[4],3)
+  r2<-round(summary(mod)$r.squared,3)
+  a<-round(mod$coefficients[1],3)
+  plot(est,obs,xlab="Estimado", ylab="Observado",pch=j,col="blue",
+       main=paste("Modelo = ",modelos[[j]][2,1],"; Coef. Reg. = ", b, " (SE = ",se, ", r2 = ", r2,")\ny intersept = ",a,"RMSE = ",RMSE ))
+  abline(lm(obs~est));
+  abline(0,1,lty=3)
+}
+```
+
+#### PASSO 5) Definido o melhor modelo, precisamos guardar os valores.
+
+``` r
+modelo <- modelo_2 ## sempre modificar
+# Salvando os parâmetros dos melhores modelo
+model <- modelo |> slice(2) |> pull(model)
+rss <- round(attr(modelo, "SSErr"),4) 
+c0 <- round(modelo$psill[[1]],4) 
+c0_c1 <- round(sum(modelo$psill),4)
+a <- ifelse(model == "Gau", round(modelo$range[[2]]*(3^.5),2),
+            ifelse(model == "Exp",round(3*modelo$range[[2]],2),
+            round(modelo$range[[2]],2)))
+
+
+predict(vari_exp,modelo)
+```
+
+``` r
+r2 <- ifelse(model == "Gau", r23,
+            ifelse(model == "Exp",r22,
+            r21)) |> pluck(1)
+tibble(
+  my_season, model, c0, c0_c1, a, rss, r2
+) |> mutate(gde = c0/c0_c1, .after = "a") |>
+  rename(season=my_season) |> 
+  write_csv(paste0("output/best-fit/",str_replace(my_season,"\\:","_"),".csv"))
+
+ls_csv <- list.files("output/best-fit/",full.names = TRUE,pattern = ".csv")
+map_df(ls_csv, read_csv) |> 
+  writexl::write_xlsx("output/semivariogram-models.xlsx")
+png(filename = paste0("output/semivariogram-img/semivar-",
+                      str_replace(my_season,"\\:","_"),".png"),
+    width = 800, height = 600)
+plot(vari_exp,model=modelo,cex.lab=2, col=1,pl=F,pch=16,cex=2.2,ylab=list("Semivariância",cex=2.3),xlab=list("Distância de Separação h (m)",cex=2.3,cex.axis=4))
+dev.off()
+```
+
+#### Passo 6 - Krigagem Ordinária - interpolação em locais não amostrados
+
+``` r
+ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
+                     block=c(0.1,0.1),
+                     nsim=0,
+                     na.action=na.pass,
+                     debug.level=-1
+)
+```
+
+#### Passo 7 - Visualização dos padrões espaciais e armazenamento dos dados e imagem.
+
+``` r
+mapa <- as.tibble(ko_variavel) |>
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = var1.pred)) +
+  scale_fill_viridis_c() +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="xco2") +
+  theme_bw()
+mapa
+ggsave(paste0("output/maps-kgr/kgr-xco2-",str_replace(my_season,"\\:","_"),".png"), plot = mapa, width = 10, height = 8, dpi = 300)
+df <- ko_variavel |>
+  as_tibble() |>
+  mutate(var1.var = sqrt(var1.var))
+write_rds(df,paste0("output/maps-kgr/kgr-xco2-",str_replace(my_season,"\\:","_"),".rds"))
+```
+
+### 4) Caracterização da Série Temporal
+
+### 5) Aprendizado de Máquina não Supervisionado

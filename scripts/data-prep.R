@@ -168,6 +168,8 @@ sp::gridded(grid) = ~ X + Y
 plot(grid$X,grid$Y)
 points(x,y,col="red",pch=4)
 
+
+
 # Análise geoestatística
 my_season = "rainy_15:16"
 data_set_aux  <- data_set_sp |>
