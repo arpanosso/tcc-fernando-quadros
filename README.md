@@ -290,7 +290,7 @@ sp::gridded(grid) = ~ X + Y
 “dry_23:24” “rainy_23:24”
 
 ``` r
-my_season = "rainy_15:16"
+my_season = "rainy_21:22"
 data_set_aux  <- data_set_sp |>
   filter(
     season_year == my_season) |>
@@ -328,7 +328,7 @@ form <- xco2 ~ 1
 vari_exp <- gstat::variogram(form, data = data_set_aux,
                       cressie = FALSE,
                       cutoff = 4, # distância máxima 8
-                      width = .5) # distancia entre pontos
+                      width = .09) # distancia entre pontos
 vari_exp  |>
   ggplot(aes(x=dist, y=gamma)) +
   geom_point() +
@@ -343,7 +343,7 @@ vari_exp  |>
 ``` r
 patamar=2
 alcance=1
-epepita=0
+epepita=0.2
 modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
@@ -594,7 +594,7 @@ ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
                      debug.level=-1
 )
 #> [using ordinary kriging]
-#>   0% done 15% done 29% done 42% done 56% done 71% done 86% done100% done
+#>   9% done 25% done 41% done 56% done 71% done 85% done100% done
 ```
 
 #### Passo 7 - Visualização dos padrões espaciais e armazenamento dos dados e imagem.
@@ -621,6 +621,142 @@ df <- ko_variavel |>
   mutate(var1.var = sqrt(var1.var))
 write_rds(df,paste0("output/maps-kgr/kgr-xco2-",str_replace(my_season,"\\:","_"),".rds"))
 ```
+
+#### Compilação de todos os mapas gerados
+
+``` r
+list_rds <- list.files("output/maps-kgr/",
+           pattern = ".rds$",
+           full.names = TRUE)
+
+rds_reader <- function(path){
+  readr::read_rds(path) |>
+    mutate(
+    path = stringr::str_remove(path,"output/maps-kgr/kgr-xco2-|\\.rds"),
+    epoch = stringr::str_sub(path,1,1),
+    season = stringr::str_sub(path,-9,-5),
+    epoch_n = ifelse(epoch == "d",1,2),
+    season_year = paste0(season,"_",epoch_n)
+    # variable = stringr::str_extract(path, "^[^\\-]+")
+     ) |>
+    rename(
+       xco2 = var1.pred, 
+       xco2_std = var1.var
+    )  |>
+    select(-path,-(epoch:epoch_n))
+};rds_reader(list_rds[1])
+#> # A tibble: 8,690 × 5
+#>        X     Y  xco2 xco2_std season_year
+#>    <dbl> <dbl> <dbl>    <dbl> <chr>      
+#>  1 -48.2 -25.2  388.    0.575 15_16_1    
+#>  2 -48.1 -25.2  388.    0.575 15_16_1    
+#>  3 -48.1 -25.2  388.    0.575 15_16_1    
+#>  4 -48.0 -25.2  388.    0.575 15_16_1    
+#>  5 -48.2 -25.2  388.    0.575 15_16_1    
+#>  6 -48.1 -25.2  388.    0.575 15_16_1    
+#>  7 -48.1 -25.2  388.    0.575 15_16_1    
+#>  8 -48.0 -25.2  388.    0.575 15_16_1    
+#>  9 -48.0 -25.2  388.    0.575 15_16_1    
+#> 10 -48.2 -25.1  388.    0.575 15_16_1    
+#> # ℹ 8,680 more rows
+
+kgr_maps <- map_df(list_rds, rds_reader)
+
+kgr_maps |> 
+  group_by(season_year) |> 
+  ggplot(aes(season_year,xco2)) +
+  geom_boxplot()+
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+
+``` r
+kgr_maps <- kgr_maps |> 
+  left_join(
+    grid_geral,
+  by=c("X","Y")
+  )
+```
+
+``` r
+kgr_maps_nested <- kgr_maps |>
+  group_by(season_year,X,Y) |>
+  summarise(
+    media = mean(xco2,na.rm = TRUE),
+    desv_pad = mean(xco2_std)
+  ) |>
+  group_by(X,Y) |>
+  nest() |>
+  ungroup()
+
+get_reg_lin <- function(df, par_return = "beta"){
+  x <- seq(0,8.5,0.5)
+  y <- df$media
+  mod <- lm(y~x)
+  value <- mod$coefficients[[2]]
+  if(par_return == "beta") return(value)
+}
+
+kgr_maps_beta <- kgr_maps_nested |>
+  mutate(
+    beta = map(data,get_reg_lin)
+  ) |>
+  select(-data) |>
+  unnest()
+
+kgr_maps_beta <- kgr_maps_beta |> 
+  left_join(
+    grid_geral,
+  by=c("X","Y")
+  )
+```
+
+``` r
+kgr_maps_beta |>
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = beta)) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="Beta_xco2") +
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+
+``` r
+city_kgr_beta <- left_join(
+  citys |> filter(abbrev_state == "SP"),
+  kgr_maps_beta |>
+    group_by(city) |> 
+    summarise(
+      beta_xco2 = mean(beta)
+    ) |> 
+    rename(name_muni = city),
+           by="name_muni")
+
+city_kgr_beta |>
+     ggplot() +
+     geom_sf(aes(fill=beta_xco2), color="transparent",
+             size=.05, show.legend = TRUE)  +
+     theme_bw() +
+   theme(
+     axis.text.x = element_text(size = rel(.9), color = "black"),
+     axis.title.x = element_text(size = rel(1.1), color = "black"),
+     axis.text.y = element_text(size = rel(.9), color = "black"),
+     axis.title.y = element_text(size = rel(1.1), color = "black"),
+     legend.text = element_text(size = rel(1), color = "black"),
+     legend.title = element_text(face = 'bold', size = rel(1.2))
+     ) +
+   labs(fill = 'Beta_xco2',
+         x = 'Longitude',
+         y = 'Latitude') +
+     scale_fill_viridis_c(option = "inferno")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
 ### 4) Caracterização da Série Temporal
 
