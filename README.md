@@ -23,17 +23,32 @@ Carregando a base geral
 
 ``` r
 data_set <- read_rds("data/nasa-xco2.rds")
-# data_set <- data_set |>
-#   filter(xco2 > 0) |>
-#   mutate(
-#     path = str_remove(path, "data-raw/nc4/|\\.nc4"),
-#     date = as_date(str_sub(path,12,17)),
-#     year = year(date),
-#     month = month(date),
-#     day = day(date),
-#     .after = "time"
-#   )
-# glimpse(data_set)
+data_set <- data_set |>
+  filter(xco2 > 0) |>
+  mutate(
+    path = str_remove(path, "data-raw/nc4/|\\.nc4"),
+    date = as_date(str_sub(path,12,17)),
+    year = year(date),
+    month = month(date),
+    day = day(date),
+    .after = "time"
+  )
+glimpse(data_set)
+#> Rows: 4,359,155
+#> Columns: 13
+#> $ longitude         <dbl> -42.02715, -42.03557, -42.62973, -42.66177, -42.6776…
+#> $ latitude          <dbl> -20.58697, -20.59402, -17.97576, -17.83512, -17.8497…
+#> $ time              <dbl> 1410021395, 1410021395, 1410021438, 1410021441, 1410…
+#> $ date              <date> 2014-09-06, 2014-09-06, 2014-09-06, 2014-09-06, 201…
+#> $ year              <dbl> 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014…
+#> $ month             <dbl> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
+#> $ day               <int> 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6…
+#> $ xco2              <dbl> 388.4401, 395.8184, 395.9337, 393.9267, 394.3022, 39…
+#> $ xco2_quality_flag <int> 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0…
+#> $ xco2_incerteza    <dbl> 0.5112882, 0.5306644, 0.4663646, 0.4828992, 0.432497…
+#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s.nc4", "oco…
+#> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
+#> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
 ```
 
 Corrigindo o polígono do Estado de São Paulo.
@@ -594,7 +609,7 @@ ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
                      debug.level=-1
 )
 #> [using ordinary kriging]
-#>   9% done 25% done 41% done 56% done 71% done 85% done100% done
+#>   0% done  4% done 11% done 15% done 19% done 24% done 28% done 32% done 36% done 41% done 45% done 49% done 53% done 57% done 61% done 68% done 85% done100% done
 ```
 
 #### Passo 7 - Visualização dos padrões espaciais e armazenamento dos dados e imagem.

@@ -33,17 +33,17 @@ source("r/my-function.R")
 Carregando a base geral
 ```{r}
 data_set <- read_rds("data/nasa-xco2.rds")
-# data_set <- data_set |>
-#   filter(xco2 > 0) |>
-#   mutate(
-#     path = str_remove(path, "data-raw/nc4/|\\.nc4"),
-#     date = as_date(str_sub(path,12,17)),
-#     year = year(date),
-#     month = month(date),
-#     day = day(date),
-#     .after = "time"
-#   )
-# glimpse(data_set)
+data_set <- data_set |>
+  filter(xco2 > 0) |>
+  mutate(
+    path = str_remove(path, "data-raw/nc4/|\\.nc4"),
+    date = as_date(str_sub(path,12,17)),
+    year = year(date),
+    month = month(date),
+    day = day(date),
+    .after = "time"
+  )
+glimpse(data_set)
 ```
 Corrigindo o polígono do Estado de São Paulo.
 ```{r}
