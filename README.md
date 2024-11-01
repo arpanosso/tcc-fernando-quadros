@@ -12,6 +12,7 @@ library(tidyverse)
 library(ggridges)
 library(geobr)
 library(gstat)
+library(vegan)
 source("r/my-function.R")
 #> Polygons loaded [states, citysbiomes, conservarion and indigenous]
 #> List of polygons loaded [list_pol]
@@ -22,8 +23,7 @@ source("r/my-function.R")
 Carregando a base geral
 
 ``` r
-data_set <- read_rds("data/nasa-xco2.rds")
-data_set <- data_set |>
+data_set <- read_rds("data/nasa-xco2.rds") |>
   filter(xco2 > 0) |>
   mutate(
     path = str_remove(path, "data-raw/nc4/|\\.nc4"),
@@ -609,7 +609,7 @@ ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
                      debug.level=-1
 )
 #> [using ordinary kriging]
-#>   0% done  4% done 11% done 15% done 19% done 24% done 28% done 32% done 36% done 41% done 45% done 49% done 53% done 57% done 61% done 68% done 85% done100% done
+#>  12% done 28% done 45% done 62% done 78% done 96% done100% done
 ```
 
 #### Passo 7 - Visualização dos padrões espaciais e armazenamento dos dados e imagem.
@@ -753,9 +753,11 @@ city_kgr_beta <- left_join(
            by="name_muni")
 
 city_kgr_beta |>
+  drop_na() |> 
      ggplot() +
      geom_sf(aes(fill=beta_xco2), color="transparent",
              size=.05, show.legend = TRUE)  +
+  geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE, lwd=.05, color="black") +
      theme_bw() +
    theme(
      axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -771,8 +773,144 @@ city_kgr_beta |>
      scale_fill_viridis_c(option = "inferno")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- --> \### 4)
+Análise de reconhecimento de padrões
 
-### 4) Caracterização da Série Temporal
+#### Por season
 
-### 5) Aprendizado de Máquina não Supervisionado
+``` r
+kgr_maps_wider <- kgr_maps |> 
+  select(season_year, X,Y,city,xco2) |> 
+  group_by(season_year, city) |> 
+  summarise(xco2 = mean(xco2, na.rm = TRUE)) |> 
+  pivot_wider(names_from = season_year,
+              values_from = xco2,names_prefix = "season_") 
+
+name_muni <- kgr_maps_wider |> pull(city)
+kgr_maps_wider_xco2 <- kgr_maps_wider |> 
+  select(season_15_16_1:season_23_24_2) #|> 
+  # select(ends_with("2"))
+  
+mc <- cor(kgr_maps_wider_xco2)
+corrplot::corrplot(mc)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+
+``` r
+da_pad<-decostand(kgr_maps_wider_xco2, 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+plot(da_pad_euc_ward, 
+     ylab="Distância Euclidiana",
+     xlab="Acessos", hang=-1,
+     col="blue", las=1,
+     cex=.6,lwd=1.5);box()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-27-2.png)<!-- -->
+
+``` r
+grupo<-cutree(da_pad_euc_ward,5)
+
+city_kgr_beta_group <- city_kgr_beta |> 
+  left_join(
+    tibble(name_muni, grupo),
+           by="name_muni")
+
+city_kgr_beta_group  |>
+  drop_na() |> 
+     ggplot() +
+     geom_sf(aes(fill=grupo), color="transparent",
+             size=.05, show.legend = TRUE)  +
+  geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
+     theme_bw() +
+   theme(
+     axis.text.x = element_text(size = rel(.9), color = "black"),
+     axis.title.x = element_text(size = rel(1.1), color = "black"),
+     axis.text.y = element_text(size = rel(.9), color = "black"),
+     axis.title.y = element_text(size = rel(1.1), color = "black"),
+     legend.text = element_text(size = rel(1), color = "black"),
+     legend.title = element_text(face = 'bold', size = rel(1.2))
+     ) +
+   labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+     scale_fill_viridis_c()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-27-3.png)<!-- -->
+
+#### Por Média anual
+
+``` r
+kgr_maps_wider <- kgr_maps |> 
+  select(season_year, X,Y,city,xco2) |> 
+  mutate(season = str_sub(season_year,1,5)) |> 
+  group_by(season, city) |> 
+  summarise(xco2 = mean(xco2, na.rm = TRUE)) |> 
+  pivot_wider(names_from = season,
+              values_from = xco2,names_prefix = "season_")
+
+name_muni <- kgr_maps_wider |> pull(city)
+kgr_maps_wider_xco2 <- kgr_maps_wider |> 
+  select(season_15_16:season_23_24) #|> 
+  # select(ends_with("2"))
+  
+mc <- cor(kgr_maps_wider_xco2)
+corrplot::corrplot(mc)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+
+``` r
+da_pad<-decostand(kgr_maps_wider_xco2, 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+plot(da_pad_euc_ward, 
+     ylab="Distância Euclidiana",
+     xlab="Acessos", hang=-1,
+     col="blue", las=1,
+     cex=.6,lwd=1.5);box()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-28-2.png)<!-- -->
+
+``` r
+grupo<-cutree(da_pad_euc_ward,5)
+
+city_kgr_beta_group <- city_kgr_beta |> 
+  left_join(
+    tibble(name_muni, grupo),
+           by="name_muni")
+
+city_kgr_beta_group  |>
+  drop_na() |> 
+     ggplot() +
+     geom_sf(aes(fill=grupo), color="transparent",
+             size=.05, show.legend = TRUE)  +
+  geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
+     theme_bw() +
+   theme(
+     axis.text.x = element_text(size = rel(.9), color = "black"),
+     axis.title.x = element_text(size = rel(1.1), color = "black"),
+     axis.text.y = element_text(size = rel(.9), color = "black"),
+     axis.title.y = element_text(size = rel(1.1), color = "black"),
+     legend.text = element_text(size = rel(1), color = "black"),
+     legend.title = element_text(face = 'bold', size = rel(1.2))
+     ) +
+   labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+     scale_fill_viridis_c()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-28-3.png)<!-- -->
+
+### 5) Caracterização da Série Temporal
+
+### 6) Aprendizado de Máquina não Supervisionado
