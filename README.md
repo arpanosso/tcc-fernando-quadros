@@ -34,21 +34,22 @@ data_set <- read_rds("data/nasa-xco2.rds") |>
     .after = "time"
   )
 glimpse(data_set)
-#> Rows: 4,359,155
-#> Columns: 13
-#> $ longitude         <dbl> -42.02715, -42.03557, -42.62973, -42.66177, -42.6776…
-#> $ latitude          <dbl> -20.58697, -20.59402, -17.97576, -17.83512, -17.8497…
-#> $ time              <dbl> 1410021395, 1410021395, 1410021438, 1410021441, 1410…
+#> Rows: 1,642,365
+#> Columns: 14
+#> $ longitude         <dbl> -42.65863, -42.67430, -42.66784, -42.69606, -42.7284…
+#> $ latitude          <dbl> -17.80767, -17.82234, -17.76740, -17.76922, -17.7975…
+#> $ time              <dbl> 1410021441, 1410021441, 1410021442, 1410021442, 1410…
 #> $ date              <date> 2014-09-06, 2014-09-06, 2014-09-06, 2014-09-06, 201…
 #> $ year              <dbl> 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014…
 #> $ month             <dbl> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
 #> $ day               <int> 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6…
-#> $ xco2              <dbl> 388.4401, 395.8184, 395.9337, 393.9267, 394.3022, 39…
-#> $ xco2_quality_flag <int> 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0…
-#> $ xco2_incerteza    <dbl> 0.5112882, 0.5306644, 0.4663646, 0.4828992, 0.432497…
-#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s.nc4", "oco…
+#> $ xco2              <dbl> 394.2419, 395.8648, 397.1195, 394.5334, 398.2997, 39…
+#> $ xco2_quality_flag <int> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
+#> $ xco2_incerteza    <dbl> 0.4676608, 0.4668227, 0.4432864, 0.4585071, 0.458115…
+#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s", "oco2_Lt…
 #> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
 #> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
+#> $ state             <chr> "MG", "MG", "MG", "MG", "MG", "MG", "MG", "MG", "MG"…
 ```
 
 Corrigindo o polígono do Estado de São Paulo.
@@ -377,6 +378,7 @@ O melhor modelo é aquele que apresenta um coeficiente de regressão o
 mais próximo de 01 e o interesepto o mais próximo de 0.
 
 ``` r
+<<<<<<< HEAD
 # conjunto_validacao <- data_set_aux |>
 #   as_tibble() |>
 #   sample_n(50)
@@ -402,6 +404,341 @@ mais próximo de 01 e o interesepto o mais próximo de 0.
 # }
 ```
 
+=======
+conjunto_validacao <- data_set_aux |>
+  as_tibble() |>
+  sample_n(100)
+sp::coordinates(conjunto_validacao) = ~longitude + latitude
+modelos<-list(modelo_1,modelo_2,modelo_3)
+for(j in 1:3){
+  est<-0
+  for(i in 1:nrow(conjunto_validacao)){
+    valid <- gstat::krige(formula=form, conjunto_validacao[-i,], conjunto_validacao, model=modelos[[j]])
+    est[i]<-valid$var1.pred[i]
+  }
+  obs<-as.data.frame(conjunto_validacao)[,3]
+  RMSE<-round((sum((obs-est)^2)/length(obs))^.5,3)
+  mod<-lm(obs~est)
+  b<-round(mod$coefficients[2],3)
+  se<-round(summary(mod)$coefficients[4],3)
+  r2<-round(summary(mod)$r.squared,3)
+  a<-round(mod$coefficients[1],3)
+  plot(est,obs,xlab="Estimado", ylab="Observado",pch=j,col="blue",
+       main=paste("Modelo = ",modelos[[j]][2,1],"; Coef. Reg. = ", b, " (SE = ",se, ", r2 = ", r2,")\ny intersept = ",a,"RMSE = ",RMSE ))
+  abline(lm(obs~est));
+  abline(0,1,lty=3)
+}
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+#> [using ordinary kriging]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+
+![](README_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->
+
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+    #> [using ordinary kriging]
+
+![](README_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
+
+>>>>>>> fd1a82d446a407a19d8f19339305eeffc0706c7c
 #### PASSO 5) Definido o melhor modelo, precisamos guardar os valores.
 
 ``` r
@@ -447,12 +784,23 @@ mais próximo de 01 e o interesepto o mais próximo de 0.
 #### Passo 6 - Krigagem Ordinária - interpolação em locais não amostrados
 
 ``` r
+<<<<<<< HEAD
 # ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
 #                      block=c(0.1,0.1),
 #                      nsim=0,
 #                      na.action=na.pass,
 #                      debug.level=-1
 # )
+=======
+ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
+                     block=c(0.1,0.1),
+                     nsim=0,
+                     na.action=na.pass,
+                     debug.level=-1
+)
+#> [using ordinary kriging]
+#>   0% done 11% done 22% done 33% done 45% done 58% done 68% done 80% done 93% done100% done
+>>>>>>> fd1a82d446a407a19d8f19339305eeffc0706c7c
 ```
 
 #### Passo 7 - Visualização dos padrões espaciais e armazenamento dos dados e imagem.
@@ -533,6 +881,111 @@ kgr_maps <- kgr_maps |>
 ```
 
 ``` r
+season <- kgr_maps |> pull(season_year) |> unique()
+map(season,~{
+  kgr_maps |> 
+    filter( season_year == .x) |> 
+    ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = xco2)) +
+  scale_fill_viridis_c(option = "mako") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="xco2",
+       title = .x) +
+  theme_bw()
+})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-9.png)<!-- -->
+
+    #> 
+    #> [[10]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-10.png)<!-- -->
+
+    #> 
+    #> [[11]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-11.png)<!-- -->
+
+    #> 
+    #> [[12]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-12.png)<!-- -->
+
+    #> 
+    #> [[13]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-13.png)<!-- -->
+
+    #> 
+    #> [[14]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-14.png)<!-- -->
+
+    #> 
+    #> [[15]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-15.png)<!-- -->
+
+    #> 
+    #> [[16]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-16.png)<!-- -->
+
+    #> 
+    #> [[17]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-17.png)<!-- -->
+
+    #> 
+    #> [[18]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-18.png)<!-- -->
+
+``` r
 kgr_maps_nested <- kgr_maps |>
   group_by(season_year,X,Y) |>
   summarise(
@@ -556,7 +1009,7 @@ kgr_maps_beta <- kgr_maps_nested |>
     beta = map(data,get_reg_lin)
   ) |>
   select(-data) |>
-  unnest()
+  unnest(cols = c(beta))
 
 kgr_maps_beta <- kgr_maps_beta |> 
   left_join(
@@ -577,7 +1030,7 @@ kgr_maps_beta |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
 ``` r
 city_kgr_beta <- left_join(
@@ -611,8 +1064,12 @@ city_kgr_beta |>
      scale_fill_viridis_c(option = "inferno")
 ```
 
+<<<<<<< HEAD
 ![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- --> \### 4)
 Análise de reconhecimento de padrões
+=======
+![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+>>>>>>> fd1a82d446a407a19d8f19339305eeffc0706c7c
 
 #### Por season (Dry vs Rainy)
 
