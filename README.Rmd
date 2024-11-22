@@ -348,7 +348,7 @@ O melhor modelo é aquele que apresenta um coeficiente de regressão o mais pró
 ```{r}
 conjunto_validacao <- data_set_aux |>
   as_tibble() |>
-  sample_n(50)
+  sample_n(100)
 sp::coordinates(conjunto_validacao) = ~longitude + latitude
 modelos<-list(modelo_1,modelo_2,modelo_3)
 for(j in 1:3){
@@ -483,6 +483,24 @@ kgr_maps <- kgr_maps |>
 ```
 
 ```{r}
+season <- kgr_maps |> pull(season_year) |> unique()
+map(season,~{
+  kgr_maps |> 
+    filter( season_year == .x) |> 
+    ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = xco2)) +
+  scale_fill_viridis_c(option = "mako") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="xco2",
+       title = .x) +
+  theme_bw()
+})
+```
+
+
+```{r}
 kgr_maps_nested <- kgr_maps |>
   group_by(season_year,X,Y) |>
   summarise(
@@ -506,7 +524,7 @@ kgr_maps_beta <- kgr_maps_nested |>
     beta = map(data,get_reg_lin)
   ) |>
   select(-data) |>
-  unnest()
+  unnest(cols = c(beta))
 
 kgr_maps_beta <- kgr_maps_beta |> 
   left_join(
@@ -558,8 +576,12 @@ city_kgr_beta |>
      scale_fill_viridis_c(option = "inferno")
 ```
 
-
 ### 4) Caracterização da Série Temporal
+
+```{r}
+
+```
+
 
 ### 5) Aprendizado de Máquina não Supervisionado
 
