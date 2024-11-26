@@ -866,31 +866,56 @@ city_kgr_beta_group  |>
 ## Entrando com o uso do solo
 
 ``` r
-land_use_change <- read_rds("data/luc.rds")
+land_use_change <- read_rds("data/grid-kgr_luc.rds") 
+
 glimpse(land_use_change)
-#> Rows: 35,865
-#> Columns: 14
-#> $ id                <dbl> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1…
-#> $ longitude         <dbl> -46.16230, -46.16945, -46.18412, -46.45498, -46.4723…
-#> $ latitude          <dbl> -23.85909, -23.86792, -23.88551, -22.52418, -22.5239…
-#> $ time              <dbl> 1420908464, 1420908464, 1420908464, 1420908488, 1420…
-#> $ date              <dttm> 2015-01-10, 2015-01-10, 2015-01-10, 2015-01-10, 201…
-#> $ year              <dbl> 2015, 2015, 2015, 2015, 2015, 2015, 2015, 2015, 2015…
-#> $ month             <dbl> 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1…
-#> $ day               <dbl> 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, …
-#> $ xco2              <dbl> 397.7722, 395.6004, 397.2961, 397.1321, 394.6047, 39…
-#> $ xco2_quality_flag <dbl> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
-#> $ xco2_incerteza    <dbl> 0.4510404, 0.4819897, 0.3985564, 0.6181597, 0.518672…
-#> $ season            <chr> "rainy", "rainy", "rainy", "rainy", "rainy", "rainy"…
-#> $ brasil_cov        <dbl> 21, 49, 49, 21, 21, 15, 21, 3, 3, 15, 21, 15, 3, 15,…
-#> $ brasil_cov_desc   <chr> "Mosaic of Uses", "Wooded Sandbank Vegetation", "Woo…
+#> Rows: 78,210
+#> Columns: 7
+#> $ id        <dbl> 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, …
+#> $ longitude <dbl> -53.06011, -53.06011, -53.06011, -53.06011, -53.06011, -53.0…
+#> $ latitude  <dbl> -22.61232, -22.61232, -22.61232, -22.61232, -22.61232, -22.6…
+#> $ city      <chr> "Rosana", "Rosana", "Rosana", "Rosana", "Rosana", "Rosana", …
+#> $ year      <dbl> 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2015, …
+#> $ cover     <dbl> 21, 21, 21, 21, 21, 21, 21, 21, 21, 3, 3, 3, 3, 3, 3, 3, 3, …
+#> $ descricao <chr> "Mosaic of Uses", "Mosaic of Uses", "Mosaic of Uses", "Mosai…
 land_use_change |> 
-  filter(year == 2016) |> 
+  filter(year == 2015) |> 
   ggplot(aes(x=longitude, y=latitude)) +
   geom_point()
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+
+``` r
+
+kgr_maps_cover <- kgr_maps |> 
+  mutate(
+    year = str_sub(season_year,1,2) |> as.numeric() +2000,
+    season = str_sub(season_year,-1) |> as.numeric(),
+    ) |> 
+  filter(season ==1) |> 
+  arrange(X,Y) |> 
+  add_column(
+    land_use_change |> 
+      arrange(longitude,latitude) |> 
+      rename(YEAR=year, CITY=city)
+  ) |> add_row(
+    kgr_maps |> 
+  mutate(
+    year = str_sub(season_year,1,2) |> as.numeric() +2000,
+    season = str_sub(season_year,-1) |> as.numeric(),
+    ) |> 
+  filter(season ==2) |> 
+  arrange(X,Y) |> 
+  add_column(
+    land_use_change |> 
+      arrange(longitude,latitude) |> 
+      rename(YEAR=year, CITY=city)
+  ) 
+) |> 
+  select(X:season,cover,descricao) |> 
+  arrange(year,season,X,Y)
+```
 
 ### 5) Caracterização da Série Temporal
 

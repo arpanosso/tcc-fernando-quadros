@@ -709,12 +709,41 @@ city_kgr_beta_group  |>
 ## Entrando com o uso do solo
 
 ```{r}
-land_use_change <- read_rds("data/luc.rds")
+land_use_change <- read_rds("data/grid-kgr_luc.rds") 
+
 glimpse(land_use_change)
 land_use_change |> 
-  filter(year == 2016) |> 
+  filter(year == 2015) |> 
   ggplot(aes(x=longitude, y=latitude)) +
   geom_point()
+
+kgr_maps_cover <- kgr_maps |> 
+  mutate(
+    year = str_sub(season_year,1,2) |> as.numeric() +2000,
+    season = str_sub(season_year,-1) |> as.numeric(),
+    ) |> 
+  filter(season ==1) |> 
+  arrange(X,Y) |> 
+  add_column(
+    land_use_change |> 
+      arrange(longitude,latitude) |> 
+      rename(YEAR=year, CITY=city)
+  ) |> add_row(
+    kgr_maps |> 
+  mutate(
+    year = str_sub(season_year,1,2) |> as.numeric() +2000,
+    season = str_sub(season_year,-1) |> as.numeric(),
+    ) |> 
+  filter(season ==2) |> 
+  arrange(X,Y) |> 
+  add_column(
+    land_use_change |> 
+      arrange(longitude,latitude) |> 
+      rename(YEAR=year, CITY=city)
+  ) 
+) |> 
+  select(X:season,cover,descricao) |> 
+  arrange(year,season,X,Y)
 ```
 
 
