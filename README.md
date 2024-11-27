@@ -34,21 +34,22 @@ data_set <- read_rds("data/nasa-xco2.rds") |>
     .after = "time"
   )
 glimpse(data_set)
-#> Rows: 4,359,155
-#> Columns: 13
-#> $ longitude         <dbl> -42.02715, -42.03557, -42.62973, -42.66177, -42.6776…
-#> $ latitude          <dbl> -20.58697, -20.59402, -17.97576, -17.83512, -17.8497…
-#> $ time              <dbl> 1410021395, 1410021395, 1410021438, 1410021441, 1410…
+#> Rows: 1,642,365
+#> Columns: 14
+#> $ longitude         <dbl> -42.65863, -42.67430, -42.66784, -42.69606, -42.7284…
+#> $ latitude          <dbl> -17.80767, -17.82234, -17.76740, -17.76922, -17.7975…
+#> $ time              <dbl> 1410021441, 1410021441, 1410021442, 1410021442, 1410…
 #> $ date              <date> 2014-09-06, 2014-09-06, 2014-09-06, 2014-09-06, 201…
 #> $ year              <dbl> 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014…
 #> $ month             <dbl> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
 #> $ day               <int> 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6…
-#> $ xco2              <dbl> 388.4401, 395.8184, 395.9337, 393.9267, 394.3022, 39…
-#> $ xco2_quality_flag <int> 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0…
-#> $ xco2_incerteza    <dbl> 0.5112882, 0.5306644, 0.4663646, 0.4828992, 0.432497…
-#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s.nc4", "oco…
+#> $ xco2              <dbl> 394.2419, 395.8648, 397.1195, 394.5334, 398.2997, 39…
+#> $ xco2_quality_flag <int> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
+#> $ xco2_incerteza    <dbl> 0.4676608, 0.4668227, 0.4432864, 0.4585071, 0.458115…
+#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s", "oco2_Lt…
 #> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
 #> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
+#> $ state             <chr> "MG", "MG", "MG", "MG", "MG", "MG", "MG", "MG", "MG"…
 ```
 
 Corrigindo o polígono do Estado de São Paulo.
@@ -915,7 +916,41 @@ kgr_maps_cover <- kgr_maps |>
 ) |> 
   select(X:season,cover,descricao) |> 
   arrange(year,season,X,Y)
+
+kgr_maps_cover |> 
+  filter(year == 2015) |> 
+  mutate(cover = cover |> as_factor()) |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = cover)) +
+  scale_fill_viridis_d(option = "A") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="Uso do solo") +
+  theme_bw()
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-30-2.png)<!-- -->
+
+``` r
+kgr_maps_cover |>
+  mutate(cover = descricao) |>
+  group_by(year, cover) |> 
+  summarise(
+    count= n(),
+  ) |> 
+  mutate(
+    perc = count/sum(count),
+    cover = cover |> fct_lump(n=7,w=perc) |> fct_reorder(count)
+  ) |> filter(cover != "Other") |> 
+  ggplot(aes(x=as_factor(cover),y=count,fill=cover)) +
+  geom_col() +
+  scale_fill_viridis_d() +
+  facet_wrap(~year) +
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
 
 ### 5) Caracterização da Série Temporal
 

@@ -744,6 +744,37 @@ kgr_maps_cover <- kgr_maps |>
 ) |> 
   select(X:season,cover,descricao) |> 
   arrange(year,season,X,Y)
+
+kgr_maps_cover |> 
+  filter(year == 2015) |> 
+  mutate(cover = cover |> as_factor()) |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = cover)) +
+  scale_fill_viridis_d(option = "A") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="Uso do solo") +
+  theme_bw()
+```
+
+
+```{r}
+kgr_maps_cover |>
+  mutate(cover = descricao) |>
+  group_by(year, cover) |> 
+  summarise(
+    count= n(),
+  ) |> 
+  mutate(
+    perc = count/sum(count),
+    cover = cover |> fct_lump(n=7,w=perc) |> fct_reorder(count)
+  ) |> filter(cover != "Other") |> 
+  ggplot(aes(x=as_factor(cover),y=count,fill=cover)) +
+  geom_col() +
+  scale_fill_viridis_d() +
+  facet_wrap(~year) +
+  theme_bw()
 ```
 
 
