@@ -34,22 +34,21 @@ data_set <- read_rds("data/nasa-xco2.rds") |>
     .after = "time"
   )
 glimpse(data_set)
-#> Rows: 1,642,365
-#> Columns: 14
-#> $ longitude         <dbl> -42.65863, -42.67430, -42.66784, -42.69606, -42.7284…
-#> $ latitude          <dbl> -17.80767, -17.82234, -17.76740, -17.76922, -17.7975…
-#> $ time              <dbl> 1410021441, 1410021441, 1410021442, 1410021442, 1410…
+#> Rows: 4,359,155
+#> Columns: 13
+#> $ longitude         <dbl> -42.02715, -42.03557, -42.62973, -42.66177, -42.6776…
+#> $ latitude          <dbl> -20.58697, -20.59402, -17.97576, -17.83512, -17.8497…
+#> $ time              <dbl> 1410021395, 1410021395, 1410021438, 1410021441, 1410…
 #> $ date              <date> 2014-09-06, 2014-09-06, 2014-09-06, 2014-09-06, 201…
 #> $ year              <dbl> 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014…
 #> $ month             <dbl> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
 #> $ day               <int> 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6…
-#> $ xco2              <dbl> 394.2419, 395.8648, 397.1195, 394.5334, 398.2997, 39…
-#> $ xco2_quality_flag <int> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
-#> $ xco2_incerteza    <dbl> 0.4676608, 0.4668227, 0.4432864, 0.4585071, 0.458115…
-#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s", "oco2_Lt…
+#> $ xco2              <dbl> 388.4401, 395.8184, 395.9337, 393.9267, 394.3022, 39…
+#> $ xco2_quality_flag <int> 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0…
+#> $ xco2_incerteza    <dbl> 0.5112882, 0.5306644, 0.4663646, 0.4828992, 0.432497…
+#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s.nc4", "oco…
 #> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
 #> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
-#> $ state             <chr> "MG", "MG", "MG", "MG", "MG", "MG", "MG", "MG", "MG"…
 ```
 
 Corrigindo o polígono do Estado de São Paulo.
@@ -930,7 +929,8 @@ kgr_maps_cover |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-30-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-30-2.png)<!-- --> \###
+Estatísticas descritivas por classe de uso do solo
 
 ``` r
 kgr_maps_cover |>
@@ -944,13 +944,185 @@ kgr_maps_cover |>
     cover = cover |> fct_lump(n=7,w=perc) |> fct_reorder(count)
   ) |> filter(cover != "Other") |> 
   ggplot(aes(x=as_factor(cover),y=count,fill=cover)) +
-  geom_col() +
-  scale_fill_viridis_d() +
+  geom_col(color="black") +
+  scale_fill_viridis_d(option = "A") +
   facet_wrap(~year) +
-  theme_bw()
+  theme_bw()+
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90)
+  )
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+
+Retirando os top 7 usos do solo no estado.
+
+``` r
+my_top_7_cover <- kgr_maps_cover |>
+  mutate(cover = descricao) |>
+  group_by(year, cover) |> 
+  summarise(
+    count= n(),
+  ) |> 
+  mutate(
+    perc = count/sum(count),
+    cover = cover |> fct_lump(n=7,w=perc) |> fct_reorder(count)
+  ) |> filter(cover != "Other") |> 
+  pull(cover) |> unique()
+```
+
+Estatísticia descritiva de xCO2 para cada classe uso por season
+
+``` r
+kgr_maps_cover |> 
+  mutate(
+    cover_top_7 = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other"),
+    season = as_factor(season)
+  ) |> 
+  ggplot(aes(y=as_factor(year))) +
+  geom_density_ridges(rel_min_height = 0.03,
+                      aes(x=xco2, fill=season),
+                      alpha = .6, color = "black"
+  ) +
+  # scale_fill_cyclical(values = c("#ff8080","#238B45"),
+  #                     name = "classe", guide = "legend") +
+  theme_ridges()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+
+``` r
+kgr_maps_cover |>
+   mutate(
+    cover_top_7 = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other"),
+    season = as_factor(season)
+  ) |> 
+  filter( cover_top_7 != "Other") |> 
+  group_by(year,season,cover_top_7) |>
+  summarise(
+    N = length(xco2),
+    MEAN = mean(xco2),
+    MEDIAN = median(xco2),
+    STD_DV = sd(xco2),
+    SKW = agricolae::skewness(xco2),
+    KRT = agricolae::kurtosis(xco2),
+  ) |>
+  writexl::write_xlsx("output/estat-desc-year-season-cover.xlsx")
+```
+
+``` r
+kgr_maps_cover |>
+   mutate(
+    cover_top_7 = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other"),
+    season = as_factor(season)
+  ) |> 
+  filter( cover_top_7 != "Other") |> 
+  group_by(year,season,cover_top_7) |>
+  ggplot(aes(x=year, y=xco2, fill = descricao)) +
+  geom_violin(trim=FALSE) +
+  facet_wrap(~season, ncol=2) +
+  theme(
+    legend.position = "top"
+  ) +
+  theme_bw()+
+  labs(fill="cover") +
+  scale_fill_viridis_d(option = "A")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-35-1.png)<!-- --> \### Análise
+de variância (ANOVA ou Kruskal-Wallis)
+
+Comparação de XCO₂ entre diferentes classes de uso do solo.
+
+``` r
+anova_group <- function(df){
+  mod <- aov(xco2 ~ cover_top_7,
+      data = df |> 
+        mutate(
+          cover_top_7 = as_factor(cover_top_7)
+        ))
+    xco2 <- df |> 
+        mutate(
+          cover_top_7 = as_factor(cover_top_7)
+        ) |> pull(xco2)
+    cover_top_7 <- df |> 
+        mutate(
+          cover_top_7 = as_factor(cover_top_7)
+        ) |> pull(cover_top_7)
+  # pcm <- agricolae::kruskal(mod,"cover_top_7",group = TRUE)
+  pcm <- agricolae::kruskal(xco2,cover_top_7, p.adj = "bonferroni",group = TRUE)
+  tb_out <- tibble(cover = rownames(pcm$groups),
+                   pcm$groups)
+  return(tb_out)
+}
+
+dd <- kgr_maps_cover |>
+   mutate(
+    cover_top_7 = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other"),
+    season = as_factor(season)
+  ) |> 
+  group_by(year, season) |> 
+  nest() |> 
+  mutate(
+    anava = map(data,anova_group)
+  ) 
+
+# Identificar todas as categorias únicas de "cover"
+categorias_cover <- dd |> 
+  select(-data) |> 
+  unnest(cols = c(anava)) |> 
+  pull(cover) |> 
+  unique()
+
+# Criar uma paleta de cores fixa para essas categorias
+paleta_cores <- setNames(viridis::viridis(length(categorias_cover),option = "A"), categorias_cover)
+
+# Loop para criar os gráficos
+for (i in 2015:2023) {
+  for (j in 1:2) {
+    xco2 <-  dd |> 
+      select(-data) |> 
+      unnest(cols = c(anava)) |> 
+      filter(season == j, year == i) |> 
+      pull(xco2)
+    min_xco2 <- min(xco2)
+    max_xco2 <- max(xco2)
+    
+    plot_tukey <- dd |> 
+      select(-data) |> 
+      unnest(cols = c(anava)) |> 
+      filter(season == j, year == i) |> 
+      arrange(xco2) |>
+      ungroup() |> 
+      mutate(
+        cover = cover |> fct_reorder(xco2)
+      ) |>
+      ggplot(aes(y = cover, x = xco2, fill = cover)) +
+      geom_col(color = "black") +
+      geom_text(aes(label = groups), 
+                hjust = -0.5, 
+                color = "black", 
+                size = 5) +
+      coord_cartesian(xlim = c(min_xco2, max_xco2)) +
+      theme_bw() +
+      scale_fill_manual(values = paleta_cores) +  # Aplicar a paleta de cores fixa
+      labs(title = paste0(i,"-",
+                          ifelse(j==1,"Dry","Rainy"))) +
+      theme(
+        legend.position = "none",
+        plot.title = element_text(hjust = .5)
+        )
+    print(plot_tukey)
+  }
+}
+```
+
+![](README_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-6.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-7.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-8.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-9.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-10.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-11.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-12.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-13.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-14.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-15.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-16.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-17.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-18.png)<!-- -->
 
 ### 5) Caracterização da Série Temporal
 

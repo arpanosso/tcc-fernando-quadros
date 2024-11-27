@@ -394,3 +394,12 @@ plot_my_models <- function(modelo_1,modelo_2,modelo_3){
   print(plot(vari_exp,model=modelo_2, col=1,pl=F,pch=16,cex=1.2,cex.main=7,ylab=list("Semivariância",cex=1.3),xlab=list("Distância de Separação h (m)",cex=1.3),main =paste("Exp(C0= ",c02,"; C0+C1= ", c0_c12, "; a= ", a2,"; r2 = ", r22,")",sep="")))
   print(plot(vari_exp,model=modelo_3, col=1,pl=F,pch=16,cex=1.2,cex.main=7,ylab=list("Semivariância",cex=1.3),xlab=list("Distância de Separação h (m)",cex=1.3),main =paste("Gau(C0= ",c03,"; C0+C1= ", c0_c13, "; a= ", a3,"; r2 = ", r23,")",sep="")))
 }
+
+
+
+data_summary <- function(x) {
+  m <- mean(x)
+  ymin <- m-sd(x)
+  ymax <- m+sd(x)
+  return(c(y=m,ymin=ymin,ymax=ymax))
+}
