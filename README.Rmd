@@ -678,7 +678,7 @@ plot(da_pad_euc_ward,
      xlab="Acessos", hang=-1,
      col="blue", las=1,
      cex=.6,lwd=1.5);box()
-grupo<-cutree(da_pad_euc_ward,5)
+grupo<-cutree(da_pad_euc_ward,4)
 
 city_kgr_beta_group <- city_kgr_beta |> 
   left_join(
@@ -959,7 +959,8 @@ kgr_maps_beta_cover_group <- kgr_maps_beta |>
       select( name_muni, grupo) |> 
       rename(city = name_muni),
     by=c("city")
-    )
+    ) |> 
+  select(-xco2, -xco2_std, -year, -season_year, -season)
 ```
 
 ```{r}
@@ -980,9 +981,91 @@ kgr_maps_beta_cover_group |>
   coord_equal() +
   labs(x="Longitude",
        y="Latitude",
-       fill="Uso do solo") +
+       fill="Cluster") +
   theme_bw()
 ```
+
+
+O arquivo `kgr_maps_beta_cover_group` associa todos os resultados até aqui gerados, Betas, krigagem, usos do solo.
+
+
+```{r}
+kgr_maps_beta_cover_group |> 
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |> 
+  group_by(grupo) |> 
+  summarise(
+    N = n(),
+    MEAN = mean(beta),
+    MEDIAN = median(beta),
+    STD_DV = sd(beta),
+    SKW = agricolae::skewness(beta),
+    KRT = agricolae::kurtosis(beta),
+  )
+
+```
+```{r}
+kgr_maps_beta_cover_group |> 
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |> 
+  group_by(grupo,descricao) |> 
+  summarise(
+    count = n()
+  ) |> 
+  group_by(grupo) |> 
+  mutate(
+    perc = count/sum(count)
+  ) |> 
+  ungroup() |> 
+  ggplot(aes(y=perc*100,x=as_factor(grupo),fill=descricao)) +
+  geom_col(color = "black") +
+  scale_fill_manual(values = paleta_cores) +
+  theme_bw()
+```
+
+
+```{r}
+kgr_maps_beta_cover_group |> 
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |> 
+  ggplot(aes(x=as_factor(grupo), y=beta, fill=as_factor(grupo))) +
+  geom_boxplot() +
+  scale_fill_viridis_d() +
+  theme_bw()
+```
+
+```{r}
+kgr_maps_beta_cover_group |> 
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |> 
+  ggplot(aes(y=as_factor(grupo))) +
+  geom_density_ridges(rel_min_height = 0.03,
+                      aes(x=beta, fill=as_factor(grupo)),
+                      alpha = .6, color = "black"
+  ) +
+  # scale_fill_cyclical(values = c("#ff8080","#238B45"),
+  #                     name = "classe", guide = "legend") +
+  theme_ridges()
+```
+
+```{r}
+# primeiro analisa xCO2
+# depois, analisa beta xCO2 período
+# beta xCO2 período poderia ser maior ou menor com a MUDANÇA no uso da terra
+# se passou de pastagem para cana por exemplo
+# tem isso também, a mudança no uso da terra pode estar influenciando na derivada xCO2
+# agora, valor médio xCO2, acredito, próximo oceano menor
+# do que pro interior
+```
+
 
 ### 5) Caracterização da Série Temporal
 

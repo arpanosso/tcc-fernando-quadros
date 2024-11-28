@@ -834,7 +834,7 @@ plot(da_pad_euc_ward,
 ![](README_files/figure-gfm/unnamed-chunk-29-2.png)<!-- -->
 
 ``` r
-grupo<-cutree(da_pad_euc_ward,5)
+grupo<-cutree(da_pad_euc_ward,4)
 
 city_kgr_beta_group <- city_kgr_beta |> 
   left_join(
@@ -1141,7 +1141,8 @@ kgr_maps_beta_cover_group <- kgr_maps_beta |>
       select( name_muni, grupo) |> 
       rename(city = name_muni),
     by=c("city")
-    )
+    ) |> 
+  select(-xco2, -xco2_std, -year, -season_year, -season)
 ```
 
 ``` r
@@ -1167,11 +1168,103 @@ kgr_maps_beta_cover_group |>
   coord_equal() +
   labs(x="Longitude",
        y="Latitude",
-       fill="Uso do solo") +
+       fill="Cluster") +
   theme_bw()
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-38-2.png)<!-- -->
+
+O arquivo `kgr_maps_beta_cover_group` associa todos os resultados até
+aqui gerados, Betas, krigagem, usos do solo.
+
+``` r
+kgr_maps_beta_cover_group |> 
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |> 
+  group_by(grupo) |> 
+  summarise(
+    N = n(),
+    MEAN = mean(beta),
+    MEDIAN = median(beta),
+    STD_DV = sd(beta),
+    SKW = agricolae::skewness(beta),
+    KRT = agricolae::kurtosis(beta),
+  )
+#> # A tibble: 4 × 7
+#>   grupo     N   MEAN MEDIAN STD_DV    SKW     KRT
+#>   <int> <int>  <dbl>  <dbl>  <dbl>  <dbl>   <dbl>
+#> 1     1  2140 0.0687 0.0698 0.0514 -0.172  2.11  
+#> 2     2  2480 0.125  0.130  0.0503 -0.200 -0.0986
+#> 3     3   805 0.105  0.0971 0.0358  0.559 -0.454 
+#> 4     4  3265 0.0654 0.0684 0.0572 -0.328  1.40
+```
+
+``` r
+kgr_maps_beta_cover_group |> 
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |> 
+  group_by(grupo,descricao) |> 
+  summarise(
+    count = n()
+  ) |> 
+  group_by(grupo) |> 
+  mutate(
+    perc = count/sum(count)
+  ) |> 
+  ungroup() |> 
+  ggplot(aes(y=perc*100,x=as_factor(grupo),fill=descricao)) +
+  geom_col(color = "black") +
+  scale_fill_manual(values = paleta_cores) +
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-40-1.png)<!-- -->
+
+``` r
+kgr_maps_beta_cover_group |> 
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |> 
+  ggplot(aes(x=as_factor(grupo), y=beta, fill=as_factor(grupo))) +
+  geom_boxplot() +
+  scale_fill_viridis_d() +
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
+
+``` r
+kgr_maps_beta_cover_group |> 
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |> 
+  ggplot(aes(y=as_factor(grupo))) +
+  geom_density_ridges(rel_min_height = 0.03,
+                      aes(x=beta, fill=as_factor(grupo)),
+                      alpha = .6, color = "black"
+  ) +
+  # scale_fill_cyclical(values = c("#ff8080","#238B45"),
+  #                     name = "classe", guide = "legend") +
+  theme_ridges()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
+
+``` r
+# primeiro analisa xCO2
+# depois, analisa beta xCO2 período
+# beta xCO2 período poderia ser maior ou menor com a MUDANÇA no uso da terra
+# se passou de pastagem para cana por exemplo
+# tem isso também, a mudança no uso da terra pode estar influenciando na derivada xCO2
+# agora, valor médio xCO2, acredito, próximo oceano menor
+# do que pro interior
+```
 
 ### 5) Caracterização da Série Temporal
 
