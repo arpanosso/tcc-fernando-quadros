@@ -34,21 +34,22 @@ data_set <- read_rds("data/nasa-xco2.rds") |>
     .after = "time"
   )
 glimpse(data_set)
-#> Rows: 4,359,155
-#> Columns: 13
-#> $ longitude         <dbl> -42.02715, -42.03557, -42.62973, -42.66177, -42.6776…
-#> $ latitude          <dbl> -20.58697, -20.59402, -17.97576, -17.83512, -17.8497…
-#> $ time              <dbl> 1410021395, 1410021395, 1410021438, 1410021441, 1410…
+#> Rows: 1,642,365
+#> Columns: 14
+#> $ longitude         <dbl> -42.65863, -42.67430, -42.66784, -42.69606, -42.7284…
+#> $ latitude          <dbl> -17.80767, -17.82234, -17.76740, -17.76922, -17.7975…
+#> $ time              <dbl> 1410021441, 1410021441, 1410021442, 1410021442, 1410…
 #> $ date              <date> 2014-09-06, 2014-09-06, 2014-09-06, 2014-09-06, 201…
 #> $ year              <dbl> 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014…
 #> $ month             <dbl> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
 #> $ day               <int> 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6…
-#> $ xco2              <dbl> 388.4401, 395.8184, 395.9337, 393.9267, 394.3022, 39…
-#> $ xco2_quality_flag <int> 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0…
-#> $ xco2_incerteza    <dbl> 0.5112882, 0.5306644, 0.4663646, 0.4828992, 0.432497…
-#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s.nc4", "oco…
+#> $ xco2              <dbl> 394.2419, 395.8648, 397.1195, 394.5334, 398.2997, 39…
+#> $ xco2_quality_flag <int> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
+#> $ xco2_incerteza    <dbl> 0.4676608, 0.4668227, 0.4432864, 0.4585071, 0.458115…
+#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s", "oco2_Lt…
 #> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
 #> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
+#> $ state             <chr> "MG", "MG", "MG", "MG", "MG", "MG", "MG", "MG", "MG"…
 ```
 
 Corrigindo o polígono do Estado de São Paulo.
@@ -1053,10 +1054,13 @@ anova_group <- function(df){
         mutate(
           cover_top_7 = as_factor(cover_top_7)
         ) |> pull(cover_top_7)
-  # pcm <- agricolae::kruskal(mod,"cover_top_7",group = TRUE)
-  pcm <- agricolae::kruskal(xco2,cover_top_7, p.adj = "bonferroni",group = TRUE)
-  tb_out <- tibble(cover = rownames(pcm$groups),
-                   pcm$groups)
+  pcm_t <- agricolae::HSD.test(mod,"cover_top_7", group = TRUE)
+  pcm_k <- agricolae::kruskal(xco2,cover_top_7, 
+                              p.adj = "bonferroni", 
+                              group = TRUE)
+  pcm_t$groups[,2] <- pcm_k$groups[,2] 
+  tb_out <- tibble(cover = rownames(pcm_t$groups),
+                   pcm_t$groups)
   return(tb_out)
 }
 
@@ -1123,6 +1127,51 @@ for (i in 2015:2023) {
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-6.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-7.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-8.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-9.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-10.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-11.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-12.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-13.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-14.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-15.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-16.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-17.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-36-18.png)<!-- -->
+
+``` r
+kgr_maps_beta_cover_group <- kgr_maps_beta |> 
+  left_join(
+    kgr_maps_cover |> 
+      filter(season == 2, year == 2020),
+    by = c("X","Y","city")
+  ) |> 
+  left_join(
+    city_kgr_beta_group |> 
+      as_tibble() |> 
+      select( name_muni, grupo) |> 
+      rename(city = name_muni),
+    by=c("city")
+    )
+```
+
+``` r
+kgr_maps_beta_cover_group |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = cover)) +
+  scale_fill_viridis_c(option = "A") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="Uso do solo") +
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+
+``` r
+
+kgr_maps_beta_cover_group |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = grupo)) +
+  scale_fill_viridis_c() +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="Uso do solo") +
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-38-2.png)<!-- -->
 
 ### 5) Caracterização da Série Temporal
 

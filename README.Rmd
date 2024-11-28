@@ -874,10 +874,13 @@ anova_group <- function(df){
         mutate(
           cover_top_7 = as_factor(cover_top_7)
         ) |> pull(cover_top_7)
-  # pcm <- agricolae::kruskal(mod,"cover_top_7",group = TRUE)
-  pcm <- agricolae::kruskal(xco2,cover_top_7, p.adj = "bonferroni",group = TRUE)
-  tb_out <- tibble(cover = rownames(pcm$groups),
-                   pcm$groups)
+  pcm_t <- agricolae::HSD.test(mod,"cover_top_7", group = TRUE)
+  pcm_k <- agricolae::kruskal(xco2,cover_top_7, 
+                              p.adj = "bonferroni", 
+                              group = TRUE)
+  pcm_t$groups[,2] <- pcm_k$groups[,2] 
+  tb_out <- tibble(cover = rownames(pcm_t$groups),
+                   pcm_t$groups)
   return(tb_out)
 }
 
@@ -943,7 +946,43 @@ for (i in 2015:2023) {
 }
 
 ```
+```{r}
+kgr_maps_beta_cover_group <- kgr_maps_beta |> 
+  left_join(
+    kgr_maps_cover |> 
+      filter(season == 2, year == 2020),
+    by = c("X","Y","city")
+  ) |> 
+  left_join(
+    city_kgr_beta_group |> 
+      as_tibble() |> 
+      select( name_muni, grupo) |> 
+      rename(city = name_muni),
+    by=c("city")
+    )
+```
 
+```{r}
+kgr_maps_beta_cover_group |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = cover)) +
+  scale_fill_viridis_c(option = "A") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="Uso do solo") +
+  theme_bw()
+
+kgr_maps_beta_cover_group |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = grupo)) +
+  scale_fill_viridis_c() +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="Uso do solo") +
+  theme_bw()
+```
 
 ### 5) Caracterização da Série Temporal
 
