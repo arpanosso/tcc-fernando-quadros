@@ -366,7 +366,7 @@ plot_my_models <- function(modelo_1,modelo_2,modelo_3){
     mutate(
       gamma_m1 = ifelse(dist <= a1, c01 + (c0_c11-c01)*(3/2*(dist/a1)-1/2*(dist/a1)^3),c0_c11),
       gamma_m2 = c02 + (c0_c12-c02)*(1-exp(-3*(dist/a2))),
-      gamma_m3 = c03 + (c0_c13-c03)*(1-exp(-3*(dist/a3)^2)),
+      gamma_m3 = c03 + (c0_c13-c03)*(1-exp(-(dist/a3)^2)),
       residuo_total = (gamma-mean(gamma))^2,
       residuo_mod_1 = (gamma - gamma_m1)^2,
       residuo_mod_2 = (gamma - gamma_m2)^2,

@@ -23,7 +23,7 @@ source("r/my-function.R")
 Carregando a base geral
 
 ``` r
-data_set <- read_rds("data/nasa-xco2.rds") |>
+data_set <- read_rds("data/nasa-xco2-sp.rds") |>
   filter(xco2 > 0) |>
   mutate(
     path = str_remove(path, "data-raw/nc4/|\\.nc4"),
@@ -34,21 +34,22 @@ data_set <- read_rds("data/nasa-xco2.rds") |>
     .after = "time"
   )
 glimpse(data_set)
-#> Rows: 4,359,155
-#> Columns: 13
-#> $ longitude         <dbl> -42.02715, -42.03557, -42.62973, -42.66177, -42.6776…
-#> $ latitude          <dbl> -20.58697, -20.59402, -17.97576, -17.83512, -17.8497…
-#> $ time              <dbl> 1410021395, 1410021395, 1410021438, 1410021441, 1410…
-#> $ date              <date> 2014-09-06, 2014-09-06, 2014-09-06, 2014-09-06, 201…
+#> Rows: 134,312
+#> Columns: 14
+#> $ longitude         <dbl> -51.26937, -51.28726, -51.30710, -51.35229, -51.2949…
+#> $ latitude          <dbl> -22.65102, -22.62188, -22.63801, -22.64994, -22.5851…
+#> $ time              <dbl> 1410282380, 1410282381, 1410282381, 1410282381, 1410…
+#> $ date              <date> 2014-09-09, 2014-09-09, 2014-09-09, 2014-09-09, 201…
 #> $ year              <dbl> 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014…
 #> $ month             <dbl> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
-#> $ day               <int> 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6…
-#> $ xco2              <dbl> 388.4401, 395.8184, 395.9337, 393.9267, 394.3022, 39…
-#> $ xco2_quality_flag <int> 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0…
-#> $ xco2_incerteza    <dbl> 0.5112882, 0.5306644, 0.4663646, 0.4828992, 0.432497…
-#> $ path              <chr> "oco2_LtCO2_140906_B11100Ar_230523232559s.nc4", "oco…
+#> $ day               <int> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
+#> $ xco2              <dbl> 396.7832, 399.2108, 400.9600, 395.3423, 397.4739, 40…
+#> $ xco2_quality_flag <int> 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1…
+#> $ xco2_incerteza    <dbl> 0.4750936, 0.5454728, 0.4203978, 0.6350012, 0.455871…
+#> $ path              <chr> "oco2_LtCO2_140909_B11100Ar_230523233135s", "oco2_Lt…
 #> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
 #> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
+#> $ flag_sp           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
 ```
 
 Corrigindo o polígono do Estado de São Paulo.
@@ -111,7 +112,7 @@ mod_trend_xco2
 #> 
 #> Coefficients:
 #> (Intercept)         year  
-#>     397.108        2.343
+#>     396.109        2.384
 summary.lm(mod_trend_xco2)
 #> 
 #> Call:
@@ -119,19 +120,19 @@ summary.lm(mod_trend_xco2)
 #>     xco2_quality_flag == 0)), year = year - min(year)))
 #> 
 #> Residuals:
-#>      Min       1Q   Median       3Q      Max 
-#> -15.8384  -0.8619   0.0406   0.9145   8.7057 
+#>     Min      1Q  Median      3Q     Max 
+#> -9.6590 -0.9532  0.0602  0.9916  7.5311 
 #> 
 #> Coefficients:
 #>              Estimate Std. Error t value Pr(>|t|)    
-#> (Intercept) 3.971e+02  2.289e-03  173484   <2e-16 ***
-#> year        2.343e+00  4.307e-04    5440   <2e-16 ***
+#> (Intercept) 3.961e+02  1.505e-02   26317   <2e-16 ***
+#> year        2.384e+00  2.848e-03     837   <2e-16 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
-#> Residual standard error: 1.473 on 1642363 degrees of freedom
-#> Multiple R-squared:  0.9474, Adjusted R-squared:  0.9474 
-#> F-statistic: 2.96e+07 on 1 and 1642363 DF,  p-value: < 2.2e-16
+#> Residual standard error: 1.523 on 37881 degrees of freedom
+#> Multiple R-squared:  0.9487, Adjusted R-squared:  0.9487 
+#> F-statistic: 7.006e+05 on 1 and 37881 DF,  p-value: < 2.2e-16
 ```
 
 ``` r
@@ -440,7 +441,7 @@ mais próximo de 01 e o interesepto o mais próximo de 0.
 #                                   c0_c1 = c0_c1) |> 
 #     mutate(
 #       gamma_m = ifelse(model == "Sph",
-#         ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-3*(dist/a)^2)))),
+#         ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-(dist/a)^2)))),
 #       residuo_total = (gamma-mean(gamma))^2,
 #       residuo_mod = (gamma - gamma_m)^2
 #     ) |>
@@ -1288,6 +1289,6 @@ kgr_maps_beta_cover_group |>
 # do que pro interior
 ```
 
-### 5) Caracterização da Série Temporal
+### Calcular a anomalia de xCO2
 
-### 6) Aprendizado de Máquina não Supervisionado
+### Calcular o deslocamento do centro de massa, dessa anomalia, por season nos período

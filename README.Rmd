@@ -33,7 +33,7 @@ source("r/my-function.R")
 
 Carregando a base geral
 ```{r}
-data_set <- read_rds("data/nasa-xco2.rds") |>
+data_set <- read_rds("data/nasa-xco2-sp.rds") |>
   filter(xco2 > 0) |>
   mutate(
     path = str_remove(path, "data-raw/nc4/|\\.nc4"),
@@ -394,7 +394,7 @@ O melhor modelo é aquele que apresenta um coeficiente de regressão o mais pró
 #                                   c0_c1 = c0_c1) |> 
 #     mutate(
 #       gamma_m = ifelse(model == "Sph",
-#         ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-3*(dist/a)^2)))),
+#         ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-(dist/a)^2)))),
 #       residuo_total = (gamma-mean(gamma))^2,
 #       residuo_mod = (gamma - gamma_m)^2
 #     ) |>
@@ -1074,10 +1074,9 @@ kgr_maps_beta_cover_group |>
 # do que pro interior
 ```
 
+### Calcular a anomalia de xCO2
 
-### 5) Caracterização da Série Temporal
-
-### 6) Aprendizado de Máquina não Supervisionado
+### Calcular o deslocamento do centro de massa, dessa anomalia, por season nos período
 
 
 
