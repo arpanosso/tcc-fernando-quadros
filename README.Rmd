@@ -348,7 +348,7 @@ my_season = "dry_15:16"
 data_set_aux  <- data_set_sp |>
   filter(
     season_year == my_season) |>
-  dplyr::select(longitude, latitude, xco2)
+  select(longitude, latitude, xco2)
 
 vct_xco2 <- vector();dist_xco2 <- vector();
 lon_grid <- vector();lat_grid <- vector();
@@ -534,13 +534,13 @@ kgr_maps <- kgr_maps |>
 kgr_maps |> 
   group_by(season_year) |> 
   ggplot(aes(season_year,xco2)) +
-  geom_boxplot()+
+  geom_boxplot(fill="gray")+
   theme_bw()
 
 kgr_maps |> 
   group_by(season_year) |> 
   ggplot(aes(season_year,xco2_anomaly)) +
-  geom_boxplot()+
+  geom_boxplot(fill="orange")+
   theme_bw()
 ```
 
@@ -551,6 +551,9 @@ kgr_maps <- kgr_maps |>
   by=c("X","Y")
   )
 ```
+
+
+### Padrões espaciais de XCO2 paa o estado por estação
 
 ```{r}
 season <- kgr_maps |> pull(season_year) |> unique()
@@ -569,6 +572,9 @@ map(season,~{
 })
 ```
 
+### Padrões espaciais de Anomalia de XCO2 paa o estado por estação
+
+
 ```{r}
 map(season,~{
   kgr_maps |> 
@@ -579,12 +585,42 @@ map(season,~{
   coord_equal() +
   labs(x="Longitude",
        y="Latitude",
-       fill="xco2",
+       fill="xco2_anomaly",
        title = .x) +
   theme_bw()
 })
 ```
 
+#### Centroide de massa
+
+```{r}
+map(season,~{
+kgr_maps |> 
+  filter(season_year == .x) |> 
+  ggplot(aes(x = X, y = Y)) +
+  geom_tile(aes(fill = xco2_anomaly)) +
+  geom_point(
+    data = kgr_maps |> 
+      filter(season_year == .x) |> 
+      filter(xco2_anomaly >0) |>
+      mutate(
+        lon_centro = sum(X*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE),
+        lat_centro = sum(Y*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE)),
+    aes(x = lon_centro, y = lat_centro), 
+             color = "cyan", size = 2.5, shape = 4, stroke = 1.2) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  facet_wrap(~ season_year) +
+  labs(
+    x = "Longitude", y = "Latitude", fill = "xco2_anomaly",
+    title = .x
+  ) +
+  theme_bw()
+})
+```
+
+
+### Cálculos por valor estimado 
 
 ```{r}
 kgr_maps_nested <- kgr_maps |>
@@ -609,15 +645,15 @@ get_my_par <- function(df, par_return = "beta"){
   if(par_return == "anomaly") return(anomaly)
 }
 
-kgr_maps_beta <- kgr_maps_nested |>
+kgr_maps_beta_anom <- kgr_maps_nested |>
   mutate(
-    beta = map(data,get_my_par),
-    anomaly = map(data,get_my_par,par_return="anomaly")
+    beta_xco2 = map(data,get_my_par),
+    anomaly_xco2 = map(data,get_my_par,par_return="anomaly")
   ) |>
   select(-data) |>
-  unnest(cols = c(beta,anomaly))
+  unnest(cols = c(beta_xco2,anomaly_xco2))
 
-kgr_maps_beta <- kgr_maps_beta |> 
+kgr_maps_beta_anom <- kgr_maps_beta_anom |> 
   left_join(
     grid_geral,
   by=c("X","Y")
@@ -625,35 +661,36 @@ kgr_maps_beta <- kgr_maps_beta |>
 ```
 
 ```{r}
-kgr_maps_beta |>
+kgr_maps_beta_anom |>
   ggplot(aes(x=X, y=Y)) +
-  geom_tile(aes(fill = beta)) +
-  scale_fill_viridis_c(option = "inferno") +
+  geom_tile(aes(fill = beta_xco2)) +
+  scale_fill_viridis_c(option = "mako") +
   coord_equal() +
   labs(x="Longitude",
        y="Latitude",
        fill="Beta_xco2") +
   theme_bw()
 
-kgr_maps_beta  |> 
+kgr_maps_beta_anom  |> 
   rename(longitude = X, latitude = Y) |> 
-  select(-beta) |> 
+  select(-beta_xco2, -anomaly_xco2) |> 
   writexl::write_xlsx("output/grid-kgr.xlsx")
 ```
 
 
 ```{r}
-city_kgr_beta <- left_join(
+city_kgr_beta_anom <- left_join(
   citys |> filter(abbrev_state == "SP"),
-  kgr_maps_beta |>
+  kgr_maps_beta_anom |>
     group_by(city) |> 
     summarise(
-      beta_xco2 = mean(beta)
+      beta_xco2 = mean(beta_xco2),
+      anomaly_xco2 = mean(anomaly_xco2)
     ) |> 
     rename(name_muni = city),
            by="name_muni")
 
-city_kgr_beta |>
+city_kgr_beta_anom |>
   drop_na() |> 
      ggplot() +
      geom_sf(aes(fill=beta_xco2), color="transparent",
@@ -668,37 +705,27 @@ city_kgr_beta |>
      legend.text = element_text(size = rel(1), color = "black"),
      legend.title = element_text(face = 'bold', size = rel(1.2))
      ) +
-   labs(fill = 'Beta_xco2',
+   labs(fill = 'beta_xco2_mean',
          x = 'Longitude',
          y = 'Latitude') +
-     scale_fill_viridis_c(option = "inferno")
+     scale_fill_viridis_c()
 ```
 
 ```{r}
-kgr_maps_beta |>
+kgr_maps_beta_anom |>
   ggplot(aes(x=X, y=Y)) +
-  geom_tile(aes(fill = anomaly)) +
-  scale_fill_viridis_c(option = "mako") +
+  geom_tile(aes(fill = anomaly_xco2)) +
+  scale_fill_viridis_c(option = "inferno") +
   coord_equal() +
   labs(x="Longitude",
        y="Latitude",
-       fill="Mean_anomaly_xco2") +
+       fill="mean_anomaly_xco2") +
   theme_bw()
 ```
 
 
 ```{r}
-city_kgr_anomaly <- left_join(
-  citys |> filter(abbrev_state == "SP"),
-  kgr_maps_beta |>
-    group_by(city) |> 
-    summarise(
-      anomaly_xco2 = mean(anomaly,na.rm=TRUE)
-    ) |> 
-    rename(name_muni = city),
-           by="name_muni")
-
-city_kgr_anomaly |>
+city_kgr_beta_anom |>
   drop_na() |> 
      ggplot() +
      geom_sf(aes(fill=anomaly_xco2), color="transparent",
@@ -713,7 +740,7 @@ city_kgr_anomaly |>
      legend.text = element_text(size = rel(1), color = "black"),
      legend.title = element_text(face = 'bold', size = rel(1.2))
      ) +
-   labs(fill = 'Beta_xco2',
+   labs(fill = 'mean_anomaly_xco2',
          x = 'Longitude',
          y = 'Latitude') +
      scale_fill_viridis_c(option = "inferno")
@@ -744,15 +771,15 @@ map(season,~{left_join(
     legend.text = element_text(size = rel(1), color = "black"),
     legend.title = element_text(face = 'bold', size = rel(1.2))
   ) +
-  labs(fill = 'Anomaly_xco2',
+  labs(fill = 'xco2_anomaly',
        x = 'Longitude',
        y = 'Latitude',
        title = .x) +
-  scale_fill_viridis_c(option = "mako")})
+  scale_fill_viridis_c(option = "inferno")})
 ```
 
 
-Anomalia para cada período
+
 
 
 ### 4) Análise de reconhecimento de padrões 
@@ -793,7 +820,7 @@ for(i in 1:2){
        cex=.6,lwd=1.5);box()
   grupo<-cutree(da_pad_euc_ward,vetor_de_grupos[i])
   
-  city_kgr_beta_group <- city_kgr_beta |> 
+  city_kgr_beta_group <- city_kgr_beta_anom |> 
     left_join(
       tibble(name_muni, grupo),
       by="name_muni")
@@ -852,7 +879,7 @@ plot(da_pad_euc_ward,
      cex=.6,lwd=1.5);box()
 grupo<-cutree(da_pad_euc_ward,4)
 
-city_kgr_beta_group <- city_kgr_beta |> 
+city_kgr_beta_group <- city_kgr_beta_anom |> 
   left_join(
     tibble(name_muni, grupo),
            by="name_muni")
@@ -910,7 +937,7 @@ plot(da_pad_euc_ward,
      cex=.6,lwd=1.5);box()
 grupo<-cutree(da_pad_euc_ward,4)
 
-city_kgr_beta_group <- city_kgr_beta |> 
+city_kgr_beta_group <- city_kgr_beta_anom |> 
   left_join(
     tibble(name_muni, grupo),
            by="name_muni")
@@ -1178,7 +1205,7 @@ for (i in 2015:2023) {
 
 ```
 ```{r}
-kgr_maps_beta_cover_group <- kgr_maps_beta |> 
+kgr_maps_beta_cover_group <- kgr_maps_beta_anom |> 
   left_join(
     kgr_maps_cover |> 
       filter(season == 2, year == 2020),
@@ -1229,13 +1256,13 @@ kgr_maps_beta_cover_group |>
   group_by(grupo) |> 
   summarise(
     N = n(),
-    MIN = min(beta),
-    MEAN = mean(beta),
-    MEDIAN = median(beta),
-    MAX = max(beta),
-    STD_DV = sd(beta),
-    SKW = agricolae::skewness(beta),
-    KRT = agricolae::kurtosis(beta),
+    MIN = min(beta_xco2),
+    MEAN = mean(beta_xco2),
+    MEDIAN = median(beta_xco2),
+    MAX = max(beta_xco2),
+    STD_DV = sd(beta_xco2),
+    SKW = agricolae::skewness(beta_xco2),
+    KRT = agricolae::kurtosis(beta_xco2),
   )
 
 ```
@@ -1267,7 +1294,7 @@ kgr_maps_beta_cover_group |>
     descricao = ifelse(descricao %in% my_top_7_cover,
                          descricao, "Other")
   ) |> 
-  ggplot(aes(x=as_factor(grupo), y=beta, fill=as_factor(grupo))) +
+  ggplot(aes(x=as_factor(grupo), y=beta_xco2, fill=as_factor(grupo))) +
   geom_boxplot() +
   scale_fill_viridis_d() +
   theme_bw()
@@ -1281,7 +1308,7 @@ kgr_maps_beta_cover_group |>
   ) |> 
   ggplot(aes(y=as_factor(grupo))) +
   geom_density_ridges(rel_min_height = 0.03,
-                      aes(x=beta, fill=as_factor(grupo)),
+                      aes(x=beta_xco2, fill=as_factor(grupo)),
                       alpha = .6, color = "black"
   ) +
   # scale_fill_cyclical(values = c("#ff8080","#238B45"),
