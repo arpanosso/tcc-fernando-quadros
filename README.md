@@ -1350,30 +1350,30 @@ for(i in 1:2){
 
 ![](README_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-39-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-39-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-39-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-39-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-39-6.png)<!-- -->
 
-#### Por Média anual
+#### Por Média anual anomalia
 
 ``` r
 kgr_maps_wider <- kgr_maps |> 
-  select(season_year, X,Y,city,xco2) |> 
+  select(season_year, X,Y,city,xco2_anomaly) |> 
   mutate(season = str_sub(season_year,1,5)) |> 
   group_by(season, city) |> 
-  summarise(xco2 = mean(xco2, na.rm = TRUE)) |> 
+  summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE)) |> 
   pivot_wider(names_from = season,
-              values_from = xco2,names_prefix = "season_")
+              values_from = xco2_anomaly,names_prefix = "season_")
 
 name_muni <- kgr_maps_wider |> pull(city)
-kgr_maps_wider_xco2 <- kgr_maps_wider |> 
+kgr_maps_wider_xco2_anomaly <- kgr_maps_wider |> 
   select(season_15_16:season_23_24) #|> 
   # select(ends_with("2"))
   
-mc <- cor(kgr_maps_wider_xco2)
+mc <- cor(kgr_maps_wider_xco2_anomaly)
 corrplot::corrplot(mc)
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-40-1.png)<!-- -->
 
 ``` r
-da_pad<-decostand(kgr_maps_wider_xco2, 
+da_pad<-decostand(kgr_maps_wider_xco2_anomaly, 
                   method = "standardize",
                   na.rm=TRUE)
 da_pad_euc<-vegdist(da_pad,"euclidean") 
@@ -1419,80 +1419,10 @@ city_kgr_beta_group  |>
 
 ![](README_files/figure-gfm/unnamed-chunk-40-3.png)<!-- -->
 
-#### Por Média anual anomalia
-
-``` r
-kgr_maps_wider <- kgr_maps |> 
-  select(season_year, X,Y,city,xco2_anomaly) |> 
-  mutate(season = str_sub(season_year,1,5)) |> 
-  group_by(season, city) |> 
-  summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE)) |> 
-  pivot_wider(names_from = season,
-              values_from = xco2_anomaly,names_prefix = "season_")
-
-name_muni <- kgr_maps_wider |> pull(city)
-kgr_maps_wider_xco2_anomaly <- kgr_maps_wider |> 
-  select(season_15_16:season_23_24) #|> 
-  # select(ends_with("2"))
-  
-mc <- cor(kgr_maps_wider_xco2_anomaly)
-corrplot::corrplot(mc)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
-
-``` r
-da_pad<-decostand(kgr_maps_wider_xco2_anomaly, 
-                  method = "standardize",
-                  na.rm=TRUE)
-da_pad_euc<-vegdist(da_pad,"euclidean") 
-da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
-plot(da_pad_euc_ward, 
-     ylab="Distância Euclidiana",
-     xlab="Acessos", hang=-1,
-     col="blue", las=1,
-     cex=.6,lwd=1.5);box()
-```
-
-![](README_files/figure-gfm/unnamed-chunk-41-2.png)<!-- -->
-
-``` r
-grupo<-cutree(da_pad_euc_ward,4)
-
-city_kgr_beta_group <- city_kgr_beta_anom |> 
-  left_join(
-    tibble(name_muni, grupo),
-           by="name_muni")
-
-city_kgr_beta_group  |>
-  mutate( grupo = as_factor(grupo )) |> 
-  drop_na() |> 
-     ggplot() +
-     geom_sf(aes(fill=grupo), color="transparent",
-             size=.05, show.legend = TRUE)  +
-  geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
-     theme_bw() +
-   theme(
-     axis.text.x = element_text(size = rel(.9), color = "black"),
-     axis.title.x = element_text(size = rel(1.1), color = "black"),
-     axis.text.y = element_text(size = rel(.9), color = "black"),
-     axis.title.y = element_text(size = rel(1.1), color = "black"),
-     legend.text = element_text(size = rel(1), color = "black"),
-     legend.title = element_text(face = 'bold', size = rel(1.2))
-     ) +
-   labs(fill = 'Agrupamento',
-         x = 'Longitude',
-         y = 'Latitude') +
-     scale_fill_viridis_d()
-```
-
-![](README_files/figure-gfm/unnamed-chunk-41-3.png)<!-- -->
-
 ## Entrando com o uso do solo
 
 ``` r
 land_use_change <- read_rds("data/grid-kgr_luc.rds") 
-
 glimpse(land_use_change)
 #> Rows: 78,210
 #> Columns: 7
@@ -1503,16 +1433,9 @@ glimpse(land_use_change)
 #> $ year      <dbl> 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2015, …
 #> $ cover     <dbl> 21, 21, 21, 21, 21, 21, 21, 21, 21, 3, 3, 3, 3, 3, 3, 3, 3, …
 #> $ descricao <chr> "Mosaic of Uses", "Mosaic of Uses", "Mosaic of Uses", "Mosai…
-land_use_change |> 
-  filter(year == 2015) |> 
-  ggplot(aes(x=longitude, y=latitude)) +
-  geom_point()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
-
 ``` r
-
 kgr_maps_cover <- kgr_maps |> ungroup() |> 
   mutate(
     year = str_sub(season_year,1,2) |> as.numeric() +2000,
@@ -1554,7 +1477,7 @@ kgr_maps_cover |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-42-2.png)<!-- --> \###
+![](README_files/figure-gfm/unnamed-chunk-42-1.png)<!-- --> \###
 Estatísticas descritivas por classe de uso do solo
 
 ``` r
@@ -1589,6 +1512,7 @@ my_top_7_cover <- kgr_maps_cover |>
   group_by(year, cover) |> 
   summarise(
     count= n(),
+    .groups = "drop"
   ) |> 
   mutate(
     perc = count/sum(count),
@@ -1597,7 +1521,7 @@ my_top_7_cover <- kgr_maps_cover |>
   pull(cover) |> unique()
 ```
 
-Estatísticia descritiva de xCO2 para cada classe uso por season
+Estatística descritiva de xCO2 para cada classe uso por season
 
 ``` r
 kgr_maps_cover |> 
@@ -1891,9 +1815,5 @@ kgr_maps_beta_cover_group |>
 # agora, valor médio xCO2, acredito, próximo oceano menor
 # do que pro interior
 ```
-
-### Calcular a anomalia de xCO2
-
-### Calcular o deslocamento do centro de massa, dessa anomalia, por season nos período
 
 ### Morans Indices I
