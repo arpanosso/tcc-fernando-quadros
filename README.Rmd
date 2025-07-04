@@ -196,7 +196,8 @@ data_set_sp |>
   theme_bw() +
   theme(legend.position = "bottom") +
   labs(fill="") +
-  scale_fill_viridis_d()
+  scale_fill_viridis_d(option = "mako") + 
+  facet_wrap(~season)
 ```
 
 
@@ -204,12 +205,12 @@ data_set_sp |>
 data_set_sp |>
   group_by(season_year) |>
   summarise(
-    N = length(xco2),
-    MEAN = mean(xco2),
-    MEDIAN = median(xco2),
-    STD_DV = sd(xco2),
-    SKW = agricolae::skewness(xco2),
-    KRT = agricolae::kurtosis(xco2),
+    N = length(xco2_anomaly),
+    MEAN = mean(xco2_anomaly),
+    MEDIAN = median(xco2_anomaly),
+    STD_DV = sd(xco2_anomaly),
+    SKW = agricolae::skewness(xco2_anomaly),
+    KRT = agricolae::kurtosis(xco2_anomaly),
   ) |>
   writexl::write_xlsx("output/estat-desc-anomaly.xlsx")
 
@@ -308,7 +309,10 @@ A definição do grid a ser estimado para pontos não amostrados para o estado d
 #   rbind(refugos)
 # 
 # write_rds(grid_geral_city,"data/grid-city.rds")
+```
 
+
+```{r}
 grid_geral <- read_rds("data/grid-city.rds")
 # citys |>
 #   filter(abbrev_state == "SP") |>
@@ -344,61 +348,62 @@ sp::gridded(grid) = ~ X + Y
 
 
 ```{r}
-my_season = "dry_15:16"
-data_set_aux  <- data_set_sp |>
-  filter(
-    season_year == my_season) |>
-  select(longitude, latitude, xco2)
-
-vct_xco2 <- vector();dist_xco2 <- vector();
-lon_grid <- vector();lat_grid <- vector();
-for(i in 1:nrow(data_set_aux)){
-  d <- sqrt((data_set_aux$longitude[i] - grid$X)^2 + 
-              (data_set_aux$latitude[i] - grid$Y)^2)
-  min_index <- order(d)[1]
-  vct_xco2[i] <- data_set_aux$xco2[min_index]
-  dist_xco2[i] <- d[order(d)[1]]
-  lon_grid[i] <- grid$X[min_index]
-  lat_grid[i] <- grid$Y[min_index]
-}
-data_set_aux$dist_xco2 <- dist_xco2
-data_set_aux$xco2_new <- vct_xco2
-data_set_aux$lon_grid <- lon_grid
-data_set_aux$lat_grid <- lat_grid
-data_set_aux |> 
-  group_by(lon_grid,lat_grid) |> 
-  summarise(
-    xco2 = mean(xco2)
-  ) |> 
-  rename(longitude = lon_grid, latitude = lat_grid) -> data_set_aux
-sp::coordinates(data_set_aux) = ~ longitude + latitude
+# my_season = "dry_15:16"
+# data_set_aux  <- data_set_sp |>
+#   filter(
+#     season_year == my_season) |>
+#   select(longitude, latitude, xco2)
+# 
+# vct_xco2 <- vector();dist_xco2 <- vector();
+# lon_grid <- vector();lat_grid <- vector();
+# for(i in 1:nrow(data_set_aux)){
+#   d <- sqrt((data_set_aux$longitude[i] - grid$X)^2 + 
+#               (data_set_aux$latitude[i] - grid$Y)^2)
+#   min_index <- order(d)[1]
+#   vct_xco2[i] <- data_set_aux$xco2[min_index]
+#   dist_xco2[i] <- d[order(d)[1]]
+#   lon_grid[i] <- grid$X[min_index]
+#   lat_grid[i] <- grid$Y[min_index]
+# }
+# data_set_aux$dist_xco2 <- dist_xco2
+# data_set_aux$xco2_new <- vct_xco2
+# data_set_aux$lon_grid <- lon_grid
+# data_set_aux$lat_grid <- lat_grid
+# data_set_aux |> 
+#   group_by(lon_grid,lat_grid) |> 
+#   summarise(
+#     xco2 = mean(xco2),
+#     .groups = "drop"
+#   ) |> 
+#   rename(longitude = lon_grid, latitude = lat_grid) -> data_set_aux
+# sp::coordinates(data_set_aux) = ~ longitude + latitude
 ```
 
 #### PASSO 2 - Construção do Semivariograma Experimental
 
 ```{r}
-form <- xco2 ~ 1
-vari_exp <- gstat::variogram(form, data = data_set_aux,
-                      cressie = FALSE,
-                      cutoff = 2, # distância máxima 8
-                      width = 0.075) # distancia entre pontos
-vari_exp  |>
-  ggplot(aes(x=dist, y=gamma)) +
-  geom_point() +
-  labs(x="lag (º)",
-       y=expression(paste(gamma,"(h)")))
+# form <- xco2 ~ 1
+# vari_exp <- gstat::variogram(form, data = data_set_aux,
+#                       cressie = FALSE,
+#                       cutoff = 2, # distância máxima 8
+#                       width = 0.075) # distancia entre pontos
+# vari_exp  |>
+#   ggplot(aes(x=dist, y=gamma)) +
+#   geom_point() +
+#   labs(x="lag (º)",
+#        y=expression(paste(gamma,"(h)")))
 ```
 
 #### PASSO 3) Ajuste dos modelos matemáticos teóricos ao semivariograma experimental
 
 ```{r}
-patamar=1.4
-alcance=0.2
-epepita=0.5
-modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
-modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
-modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
-plot_my_models(modelo_1,modelo_2,modelo_3)
+# patamar=1.4
+# alcance=0.2
+# epepita=0.5
+# modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+# modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+# modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
+# plot_my_models(modelo_1,modelo_2,modelo_3)
 ```
 #### PASSO 4) Escolha do melhor modelo
 
@@ -502,6 +507,7 @@ O melhor modelo é aquele que apresenta um coeficiente de regressão o mais pró
 ```
 
 #### Compilação de todos os mapas gerados
+
 ```{r}
 list_rds <- list.files("output/maps-kgr/",
            pattern = ".rds$",
@@ -522,13 +528,13 @@ rds_reader <- function(path){
        xco2_std = var1.var
     )  |>
     select(-path,-(epoch:epoch_n))
-};rds_reader(list_rds[1])
+}
 
 kgr_maps <- map_df(list_rds, rds_reader)
 
 kgr_maps <- kgr_maps |> 
   group_by(season_year) |> 
-  mutate(xco2_anomaly = xco2 - mean(xco2,na.rm=TRUE),
+  mutate(xco2_anomaly = xco2 - median(xco2,na.rm=TRUE),
          .after = xco2)
 
 kgr_maps |> 
@@ -886,11 +892,11 @@ for(i in 1:2){
       period = as.numeric(str_sub(season_year,7,7))
     ) |>
     filter(period == i) |> 
-    select(season, X,Y,city,xco2) |> 
+    select(season, X,Y,city,xco2_anomaly) |> 
     group_by(season, city) |> 
-    summarise(xco2 = mean(xco2, na.rm = TRUE)) |> 
+    summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE)) |> 
     pivot_wider(names_from = season,
-                values_from = xco2,names_prefix = "season_")
+                values_from = xco2_anomaly,names_prefix = "season_")
   name_muni <- kgr_maps_wider |> pull(city)
   kgr_maps_wider_xco2 <- kgr_maps_wider |> 
     select(season_15_16:season_23_24) #|> 
@@ -1122,6 +1128,7 @@ kgr_maps_cover |>
     STD_DV = sd(xco2),
     SKW = agricolae::skewness(xco2),
     KRT = agricolae::kurtosis(xco2),
+    .groups = "drop"
   ) |>
   writexl::write_xlsx("output/estat-desc-year-season-cover.xlsx")
 ```
@@ -1326,7 +1333,7 @@ kgr_maps_beta_cover_group |>
     descricao = ifelse(descricao %in% my_top_7_cover,
                          descricao, "Other")
   ) |> 
-  ggplot(aes(x=as_factor(grupo), y=beta_xco2, fill=as_factor(grupo))) +
+  ggplot(aes(x=as_factor(grupo), y=anomaly_xco2, fill=as_factor(grupo))) +
   geom_boxplot() +
   scale_fill_viridis_d() +
   theme_bw()
@@ -1340,7 +1347,7 @@ kgr_maps_beta_cover_group |>
   ) |> 
   ggplot(aes(y=as_factor(grupo))) +
   geom_density_ridges(rel_min_height = 0.03,
-                      aes(x=beta_xco2, fill=as_factor(grupo)),
+                      aes(x=anomaly_xco2, fill=as_factor(grupo)),
                       alpha = .6, color = "black"
   ) +
   # scale_fill_cyclical(values = c("#ff8080","#238B45"),
