@@ -10,6 +10,7 @@
 ``` r
 library(tidyverse)
 library(ggridges)
+library(ggpubr)
 library(geobr)
 library(gstat)
 library(vegan)
@@ -23,48 +24,33 @@ source("r/my-function.R")
 Carregando a base geral
 
 ``` r
-data_set <- read_rds("data/nasa-xco2-sp.rds") |>
-  filter(xco2 > 0) |>
-  mutate(
-    path = str_remove(path, "data-raw/nc4/|\\.nc4"),
-    date = as_date(str_sub(path,12,17)),
-    year = year(date),
-    month = month(date),
-    day = day(date),
-    .after = "time"
-  )
-glimpse(data_set)
-#> Rows: 134,312
-#> Columns: 14
-#> $ longitude         <dbl> -51.26937, -51.28726, -51.30710, -51.35229, -51.2949…
-#> $ latitude          <dbl> -22.65102, -22.62188, -22.63801, -22.64994, -22.5851…
-#> $ time              <dbl> 1410282380, 1410282381, 1410282381, 1410282381, 1410…
-#> $ date              <date> 2014-09-09, 2014-09-09, 2014-09-09, 2014-09-09, 201…
-#> $ year              <dbl> 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014…
-#> $ month             <dbl> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
-#> $ day               <int> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
-#> $ xco2              <dbl> 396.7832, 399.2108, 400.9600, 395.3423, 397.4739, 40…
-#> $ xco2_quality_flag <int> 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1…
-#> $ xco2_incerteza    <dbl> 0.4750936, 0.5454728, 0.4203978, 0.6350012, 0.455871…
-#> $ path              <chr> "oco2_LtCO2_140909_B11100Ar_230523233135s", "oco2_Lt…
-#> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
-#> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
-#> $ flag_sp           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
+# data_set <- read_rds("data/nasa-xco2.rds") |>
+#   filter(xco2 > 0) |>
+#   mutate(
+#     path = str_remove(path, "data-raw/nc4/|\\.nc4"),
+#     date = as_date(str_sub(path,12,17)),
+#     year = year(date),
+#     month = month(date),
+#     day = day(date),
+#     .after = "time"
+#   )
+# glimpse(data_set)
 ```
 
 Corrigindo o polígono do Estado de São Paulo.
 
 ``` r
-pol_sp <- states |> filter(abbrev_state == "SP") |> 
-  pull(geom) |> 
-  pluck(1) |> 
-  as.matrix()
-pol_sp <- pol_sp[(183:4742),]
-pol_sp <- rbind(pol_sp, pol_sp[1,])
-# plot(pol_sp)
+# pol_sp <- states |> filter(abbrev_state == "SP") |> 
+#   pull(geom) |> 
+#   pluck(1) |> 
+#   as.matrix()
+# pol_sp <- pol_sp[(183:4742),]
+# pol_sp <- rbind(pol_sp, pol_sp[1,])
+# # plot(pol_sp)
 ```
 
-Classificando os pontos pertencentes ao estado
+Classificando os pontos pertencentes ao estado de São Paulo e gerando um
+arqui para o estado.
 
 ``` r
 # data_set_sp <- data_set |>
@@ -76,30 +62,28 @@ Classificando os pontos pertencentes ao estado
 data_set_sp <- read_rds("data/nasa-xco2-sp.rds")
 ```
 
-#### Existe uma tendência regional nos dados, e ela deve ser retirada
+#### Existe uma tendência regional nos dados, e ela deve ser retirada para esse trabalho
 
 ``` r
-data_set |>
-  sample_n(1000) |>
-  drop_na() |>
-  mutate( year = year - min(year)) |>
-  ggplot(aes(x=year, y=xco2)) +
-  geom_point() +
-  geom_point(shape=21,color="black",fill="gray") +
-  geom_smooth(method = "lm") +
-  ggpubr::stat_regline_equation(ggplot2::aes(
-  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
-  theme_bw() +
-  labs(x="Ano",y="xco2")
+# data_set_sp |>
+#   sample_n(1000) |>
+#   drop_na() |>
+#   mutate( year = year - min(year)) |>
+#   ggplot(aes(x=year, y=xco2)) +
+#   geom_point() +
+#   geom_point(shape=21,color="black",fill="gray") +
+#   geom_smooth(method = "lm") +
+#   stat_regline_equation(aes(
+#   label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
+#   theme_bw() +
+#   labs(x="Ano",y="xco2")
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 #### Análise de regressão linear simples para caracterização da tendência.
 
 ``` r
 mod_trend_xco2 <- lm(xco2 ~ year, 
-          data = data_set |> 
+          data = data_set_sp |> 
             filter(xco2_quality_flag == 0) |> 
             drop_na() |> 
             mutate( year = year - min(year)) 
@@ -107,7 +91,7 @@ mod_trend_xco2 <- lm(xco2 ~ year,
 mod_trend_xco2
 #> 
 #> Call:
-#> lm(formula = xco2 ~ year, data = mutate(drop_na(filter(data_set, 
+#> lm(formula = xco2 ~ year, data = mutate(drop_na(filter(data_set_sp, 
 #>     xco2_quality_flag == 0)), year = year - min(year)))
 #> 
 #> Coefficients:
@@ -116,7 +100,7 @@ mod_trend_xco2
 summary.lm(mod_trend_xco2)
 #> 
 #> Call:
-#> lm(formula = xco2 ~ year, data = mutate(drop_na(filter(data_set, 
+#> lm(formula = xco2 ~ year, data = mutate(drop_na(filter(data_set_sp, 
 #>     xco2_quality_flag == 0)), year = year - min(year)))
 #> 
 #> Residuals:
@@ -160,8 +144,13 @@ data_set_sp <- data_set_sp |>
                                   paste0("dry_",year-2000,":",year-1999),                                  paste0("rainy_",year-2000,":",year-1999))),
       epoch = str_remove(season_year,"dry_|rainy_")) |> 
     filter(season_year != "rainy_2014-2015",
-         epoch != "14:15")
-  
+         epoch != "14:15") |> 
+  group_by(season_year) |> 
+  mutate(
+    xco2_anomaly = xco2 - median(xco2, na.rm = TRUE),
+    .after = xco2
+  ) |> 
+  ungroup()
 ```
 
 ### 2) Análise Estatística Básica
@@ -187,6 +176,25 @@ data_set_sp %>%
 ![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ``` r
+data_set_sp %>%
+  mutate(
+  #   fct_year = fct_rev(as.factor(year)),
+  #   classe = ifelse(tratamento ==
+  #            "UC_desm" | tratamento == "TI_desm",
+  #                   "Des","Con")
+  ) %>%
+  ggplot(aes(y=epoch)) +
+  geom_density_ridges(rel_min_height = 0.03,
+                      aes(x=xco2_anomaly, fill=season),
+                      alpha = .6, color = "black"
+  ) + 
+  scale_fill_viridis_d(option = "inferno") +
+  theme_ridges()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+``` r
 data_set_sp |>
   group_by(season_year) |>
   summarise(
@@ -210,10 +218,40 @@ data_set_sp |>
   theme_bw() +
   theme(legend.position = "bottom") +
   labs(fill="") +
-  scale_fill_viridis_d()
+  scale_fill_viridis_d(option = "mako") + 
+  facet_wrap(~season)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+``` r
+data_set_sp |>
+  group_by(season_year) |>
+  summarise(
+    N = length(xco2_anomaly),
+    MEAN = mean(xco2_anomaly),
+    MEDIAN = median(xco2_anomaly),
+    STD_DV = sd(xco2_anomaly),
+    SKW = agricolae::skewness(xco2_anomaly),
+    KRT = agricolae::kurtosis(xco2_anomaly),
+  ) |>
+  writexl::write_xlsx("output/estat-desc-anomaly.xlsx")
+
+data_set_sp |>
+  group_by(epoch, season) |> 
+   # summarise(
+   #  xco2 = mean(xco2)) |> 
+  ggplot(aes(x=epoch, y=xco2_anomaly, fill = season)) +
+  # geom_col(position = "dodge") +
+  geom_boxplot() +
+  # coord_cartesian(ylim = c(380,395))+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  labs(fill="") +
+  scale_fill_viridis_d(option = "inferno")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ### 3) Análise Geoestatística
 
@@ -296,23 +334,23 @@ SP.
 #   rbind(refugos)
 # 
 # write_rds(grid_geral_city,"data/grid-city.rds")
-
-grid_geral <- read_rds("data/grid-city.rds")
-citys |> 
-  filter(abbrev_state == "SP") |> 
-   ggplot() +
-     geom_sf(aes_string(), color="black",
-              size=.05, show.legend = TRUE) +
-  theme_minimal() +
-  geom_point(
-    data = grid_geral |> 
-  sample_n(1000),
-  aes(X,Y),
-  color = "red"
-  )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+``` r
+grid_geral <- read_rds("data/grid-city.rds")
+# citys |>
+#   filter(abbrev_state == "SP") |>
+#    ggplot() +
+#      geom_sf(aes_string(), color="black",
+#               size=.05, show.legend = TRUE) +
+#   theme_minimal() +
+#   geom_point(
+#     data = grid_geral |>
+#   sample_n(1000),
+#   aes(X,Y),
+#   color = "red"
+#   )
+```
 
 #### Definição do gradeado adensado.
 
@@ -331,68 +369,65 @@ sp::gridded(grid) = ~ X + Y
 “dry_23:24” “rainy_23:24”
 
 ``` r
-my_season = "dry_15:16"
-data_set_aux  <- data_set_sp |>
-  filter(
-    season_year == my_season) |>
-  dplyr::select(longitude, latitude, xco2)
-
-vct_xco2 <- vector();dist_xco2 <- vector();
-lon_grid <- vector();lat_grid <- vector();
-for(i in 1:nrow(data_set_aux)){
-  d <- sqrt((data_set_aux$longitude[i] - grid$X)^2 + 
-              (data_set_aux$lat[i] - grid$Y)^2
-  )
-  min_index <- order(d)[1]
-  vct_xco2[i] <- data_set_aux$xco2[min_index]
-  dist_xco2[i] <- d[order(d)[1]]
-  lon_grid[i] <- grid$X[min_index]
-  lat_grid[i] <- grid$Y[min_index]
-}
-data_set_aux$dist_xco2 <- dist_xco2
-data_set_aux$xco2_new <- vct_xco2
-data_set_aux$lon_grid <- lon_grid
-data_set_aux$lat_grid <- lat_grid
-data_set_aux |> 
-  group_by(lon_grid,lat_grid) |> 
-  summarise(
-    xco2 = mean(xco2)
-  ) |> 
-  rename(longitude = lon_grid, latitude = lat_grid) -> data_set_aux
-sp::coordinates(data_set_aux) = ~ longitude + latitude
+# my_season = "dry_15:16"
+# data_set_aux  <- data_set_sp |>
+#   filter(
+#     season_year == my_season) |>
+#   select(longitude, latitude, xco2)
+# 
+# vct_xco2 <- vector();dist_xco2 <- vector();
+# lon_grid <- vector();lat_grid <- vector();
+# for(i in 1:nrow(data_set_aux)){
+#   d <- sqrt((data_set_aux$longitude[i] - grid$X)^2 + 
+#               (data_set_aux$latitude[i] - grid$Y)^2)
+#   min_index <- order(d)[1]
+#   vct_xco2[i] <- data_set_aux$xco2[min_index]
+#   dist_xco2[i] <- d[order(d)[1]]
+#   lon_grid[i] <- grid$X[min_index]
+#   lat_grid[i] <- grid$Y[min_index]
+# }
+# data_set_aux$dist_xco2 <- dist_xco2
+# data_set_aux$xco2_new <- vct_xco2
+# data_set_aux$lon_grid <- lon_grid
+# data_set_aux$lat_grid <- lat_grid
+# data_set_aux |> 
+#   group_by(lon_grid,lat_grid) |> 
+#   summarise(
+#     xco2 = mean(xco2),
+#     .groups = "drop"
+#   ) |> 
+#   rename(longitude = lon_grid, latitude = lat_grid) -> data_set_aux
+# sp::coordinates(data_set_aux) = ~ longitude + latitude
 ```
 
 #### PASSO 2 - Construção do Semivariograma Experimental
 
 ``` r
-form <- xco2 ~ 1
-vari_exp <- gstat::variogram(form, data = data_set_aux,
-                      cressie = FALSE,
-                      cutoff = 2, # distância máxima 8
-                      width = 0.075) # distancia entre pontos
-vari_exp  |>
-  ggplot(aes(x=dist, y=gamma)) +
-  geom_point() +
-  labs(x="lag (º)",
-       y=expression(paste(gamma,"(h)")))
+# form <- xco2 ~ 1
+# vari_exp <- gstat::variogram(form, data = data_set_aux,
+#                       cressie = FALSE,
+#                       cutoff = 2, # distância máxima 8
+#                       width = 0.075) # distancia entre pontos
+# vari_exp  |>
+#   ggplot(aes(x=dist, y=gamma)) +
+#   geom_point() +
+#   labs(x="lag (º)",
+#        y=expression(paste(gamma,"(h)")))
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 #### PASSO 3) Ajuste dos modelos matemáticos teóricos ao semivariograma experimental
 
 ``` r
-patamar=1.4
-alcance=0.2
-epepita=0.5
-modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
-modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
-modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
-plot_my_models(modelo_1,modelo_2,modelo_3)
+# patamar=1.4
+# alcance=0.2
+# epepita=0.5
+# modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+# modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+# modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
+# plot_my_models(modelo_1,modelo_2,modelo_3)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
-\#### PASSO 4) Escolha do melhor modelo
+#### PASSO 4) Escolha do melhor modelo
 
 O melhor modelo é aquele que apresenta um coeficiente de regressão o
 mais próximo de 01 e o interesepto o mais próximo de 0.
@@ -518,32 +553,34 @@ rds_reader <- function(path){
        xco2_std = var1.var
     )  |>
     select(-path,-(epoch:epoch_n))
-};rds_reader(list_rds[1])
-#> # A tibble: 8,690 × 5
-#>        X     Y  xco2 xco2_std season_year
-#>    <dbl> <dbl> <dbl>    <dbl> <chr>      
-#>  1 -48.2 -25.2  388.    0.575 15_16_1    
-#>  2 -48.1 -25.2  388.    0.575 15_16_1    
-#>  3 -48.1 -25.2  388.    0.575 15_16_1    
-#>  4 -48.0 -25.2  388.    0.575 15_16_1    
-#>  5 -48.2 -25.2  388.    0.575 15_16_1    
-#>  6 -48.1 -25.2  388.    0.575 15_16_1    
-#>  7 -48.1 -25.2  388.    0.575 15_16_1    
-#>  8 -48.0 -25.2  388.    0.575 15_16_1    
-#>  9 -48.0 -25.2  388.    0.575 15_16_1    
-#> 10 -48.2 -25.1  388.    0.575 15_16_1    
-#> # ℹ 8,680 more rows
+}
 
 kgr_maps <- map_df(list_rds, rds_reader)
+
+kgr_maps <- kgr_maps |> 
+  group_by(season_year) |> 
+  mutate(xco2_anomaly = xco2 - median(xco2,na.rm=TRUE),
+         .after = xco2)
 
 kgr_maps |> 
   group_by(season_year) |> 
   ggplot(aes(season_year,xco2)) +
-  geom_boxplot()+
+  geom_boxplot(fill="gray")+
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
+
+``` r
+
+kgr_maps |> 
+  group_by(season_year) |> 
+  ggplot(aes(season_year,xco2_anomaly)) +
+  geom_boxplot(fill="orange")+
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-26-2.png)<!-- -->
 
 ``` r
 kgr_maps <- kgr_maps |> 
@@ -552,6 +589,8 @@ kgr_maps <- kgr_maps |>
   by=c("X","Y")
   )
 ```
+
+### Padrões espaciais de XCO2 para o estado por estação
 
 ``` r
 season <- kgr_maps |> pull(season_year) |> unique()
@@ -571,131 +610,389 @@ map(season,~{
 #> [[1]]
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
 
     #> 
     #> [[2]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-2.png)<!-- -->
 
     #> 
     #> [[3]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-3.png)<!-- -->
 
     #> 
     #> [[4]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-4.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-4.png)<!-- -->
 
     #> 
     #> [[5]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-5.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-5.png)<!-- -->
 
     #> 
     #> [[6]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-6.png)<!-- -->
 
     #> 
     #> [[7]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-7.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-7.png)<!-- -->
 
     #> 
     #> [[8]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-8.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-8.png)<!-- -->
 
     #> 
     #> [[9]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-9.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-9.png)<!-- -->
 
     #> 
     #> [[10]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-10.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-10.png)<!-- -->
 
     #> 
     #> [[11]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-11.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-11.png)<!-- -->
 
     #> 
     #> [[12]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-12.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-12.png)<!-- -->
 
     #> 
     #> [[13]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-13.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-13.png)<!-- -->
 
     #> 
     #> [[14]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-14.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-14.png)<!-- -->
 
     #> 
     #> [[15]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-15.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-15.png)<!-- -->
 
     #> 
     #> [[16]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-16.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-16.png)<!-- -->
 
     #> 
     #> [[17]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-17.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-17.png)<!-- -->
 
     #> 
     #> [[18]]
 
-![](README_files/figure-gfm/unnamed-chunk-25-18.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-28-18.png)<!-- -->
+
+### Padrões espaciais de Anomalia de XCO2 paa o estado por estação
+
+``` r
+map(season,~{
+  kgr_maps |> 
+    filter( season_year == .x) |> 
+    ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = xco2_anomaly)) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="xco2_anomaly",
+       title = .x) +
+  theme_bw()
+})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-9.png)<!-- -->
+
+    #> 
+    #> [[10]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-10.png)<!-- -->
+
+    #> 
+    #> [[11]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-11.png)<!-- -->
+
+    #> 
+    #> [[12]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-12.png)<!-- -->
+
+    #> 
+    #> [[13]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-13.png)<!-- -->
+
+    #> 
+    #> [[14]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-14.png)<!-- -->
+
+    #> 
+    #> [[15]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-15.png)<!-- -->
+
+    #> 
+    #> [[16]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-16.png)<!-- -->
+
+    #> 
+    #> [[17]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-17.png)<!-- -->
+
+    #> 
+    #> [[18]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-18.png)<!-- -->
+
+#### Centroide de massa, cold and hotspots
+
+``` r
+map(season,~{
+  
+# Identificar hotspots 
+hotspots <- kgr_maps |>
+  filter(season_year == .x) |> 
+  slice_max(xco2_anomaly, n = 5, with_ties = FALSE) |>
+  mutate(tipo = "hotspot")  
+
+coldspots <- kgr_maps |>
+  filter(season_year == .x) |> 
+  slice_min(xco2_anomaly, n = 5, with_ties = FALSE) |>
+  mutate(tipo = "coldspot")  
+
+pontos_destaque <- bind_rows(hotspots, coldspots)
+
+kgr_maps |> 
+  filter(season_year == .x) |> 
+  ggplot(aes(x = X, y = Y)) +
+  geom_tile(aes(fill = xco2_anomaly)) +
+  geom_point(data = pontos_destaque,
+             aes(x = X, y = Y, color = tipo),
+             shape = 21, size = 3, fill = "white", stroke = 1.2) +
+  scale_color_manual(values = c("hotspot" = "red", "coldspot" = "blue")) +
+  geom_point(
+    data = kgr_maps |> 
+      filter(season_year == .x) |> 
+      filter(xco2_anomaly >0) |>
+      mutate(
+        lon_centro = sum(X*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE),
+        lat_centro = sum(Y*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE)),
+    aes(x = lon_centro, y = lat_centro), 
+             color = "cyan", size = 2.5, shape = 4, stroke = 1.2) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  facet_wrap(~ season_year) +
+  labs(
+    x = "Longitude", y = "Latitude", fill = "xco2_anomaly",
+    title = .x
+  ) +
+  theme_bw()
+})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-9.png)<!-- -->
+
+    #> 
+    #> [[10]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-10.png)<!-- -->
+
+    #> 
+    #> [[11]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-11.png)<!-- -->
+
+    #> 
+    #> [[12]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-12.png)<!-- -->
+
+    #> 
+    #> [[13]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-13.png)<!-- -->
+
+    #> 
+    #> [[14]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-14.png)<!-- -->
+
+    #> 
+    #> [[15]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-15.png)<!-- -->
+
+    #> 
+    #> [[16]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-16.png)<!-- -->
+
+    #> 
+    #> [[17]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-17.png)<!-- -->
+
+    #> 
+    #> [[18]]
+
+![](README_files/figure-gfm/unnamed-chunk-30-18.png)<!-- -->
+
+### Cálculos por valor estimado do Beta e das médias das anomalias no período todo
 
 ``` r
 kgr_maps_nested <- kgr_maps |>
   group_by(season_year,X,Y) |>
   summarise(
-    media = mean(xco2,na.rm = TRUE),
-    desv_pad = mean(xco2_std)
+    media_xco2 = mean(xco2,na.rm = TRUE),
+    media_xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE),
+    desv_pad = mean(xco2_std),
+    .groups = "drop"
   ) |>
   group_by(X,Y) |>
   nest() |>
   ungroup()
+```
 
-get_reg_lin <- function(df, par_return = "beta"){
+Função para calcular o beta ou a média das anomalias por coordenada
+
+``` r
+get_my_par <- function(df, par_return = "beta"){
   x <- seq(0,8.5,0.5)
-  y <- df$media
+  y <- df$media_xco2
   mod <- lm(y~x)
-  value <- mod$coefficients[[2]]
-  if(par_return == "beta") return(value)
+  beta <- mod$coefficients[[2]]
+  if(par_return == "beta") return(beta)
+  yanom <- df$media_xco2_anomaly
+  anomaly <- mean(yanom,na.rm=TRUE)
+  if(par_return == "anomaly") return(anomaly)
 }
+```
 
-kgr_maps_beta <- kgr_maps_nested |>
+Càlculo e mapeamento de Beta e Média de anomalias
+
+``` r
+kgr_maps_beta_anom <- kgr_maps_nested |>
   mutate(
-    beta = map(data,get_reg_lin)
+    beta_xco2 = map(data,get_my_par,par_return="beta"),
+    anomaly_xco2 = map(data,get_my_par,par_return="anomaly")
   ) |>
   select(-data) |>
-  unnest(cols = c(beta))
+  unnest(cols = c(beta_xco2,anomaly_xco2))
 
-kgr_maps_beta <- kgr_maps_beta |> 
+kgr_maps_beta_anom <- kgr_maps_beta_anom |> 
   left_join(
     grid_geral,
   by=c("X","Y")
   )
 ```
 
+Mapa do Beta
+
 ``` r
-kgr_maps_beta |>
+kgr_maps_beta_anom |>
   ggplot(aes(x=X, y=Y)) +
-  geom_tile(aes(fill = beta)) +
-  scale_fill_viridis_c(option = "inferno") +
+  geom_tile(aes(fill = beta_xco2)) +
+  scale_fill_viridis_c() +
   coord_equal() +
   labs(x="Longitude",
        y="Latitude",
@@ -703,28 +1000,35 @@ kgr_maps_beta |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
 
 ``` r
 
-kgr_maps_beta  |> 
+kgr_maps_beta_anom  |> 
   rename(longitude = X, latitude = Y) |> 
-  select(-beta) |> 
+  select(-beta_xco2, -anomaly_xco2) |> 
   writexl::write_xlsx("output/grid-kgr.xlsx")
 ```
 
+Agrgação de betas e anomalias (médias nos municípios)
+
 ``` r
-city_kgr_beta <- left_join(
+city_kgr_beta_anom <- left_join(
   citys |> filter(abbrev_state == "SP"),
-  kgr_maps_beta |>
+  kgr_maps_beta_anom |>
     group_by(city) |> 
     summarise(
-      beta_xco2 = mean(beta)
+      beta_xco2 = mean(beta_xco2),
+      anomaly_xco2 = mean(anomaly_xco2)
     ) |> 
     rename(name_muni = city),
            by="name_muni")
+```
 
-city_kgr_beta |>
+Beta municipal
+
+``` r
+city_kgr_beta_anom |>
   drop_na() |> 
      ggplot() +
      geom_sf(aes(fill=beta_xco2), color="transparent",
@@ -739,38 +1043,255 @@ city_kgr_beta |>
      legend.text = element_text(size = rel(1), color = "black"),
      legend.title = element_text(face = 'bold', size = rel(1.2))
      ) +
-   labs(fill = 'Beta_xco2',
+   labs(fill = 'beta_xco2_mean',
          x = 'Longitude',
          y = 'Latitude') +
-     scale_fill_viridis_c(option = "inferno")
+     scale_fill_viridis_c()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- --> \### 4)
-Análise de reconhecimento de padrões
+![](README_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
+
+Mapa da Anomalia média
+
+``` r
+kgr_maps_beta_anom |>
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = anomaly_xco2)) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="mean_anomaly_xco2") +
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
+
+Anomalia média municipal
+
+``` r
+hotspots <- city_kgr_beta_anom |>
+  slice_max(anomaly_xco2, n = 5, with_ties = FALSE) |>
+  mutate(tipo = "hotspot")
+
+coldspots <- city_kgr_beta_anom |>
+  slice_min(anomaly_xco2, n = 5, with_ties = FALSE) |>
+  mutate(tipo = "coldspot")
+
+# Juntar os pontos de interesse
+pontos_destaque <- bind_rows(hotspots, coldspots)
+
+city_kgr_beta_anom |>
+  drop_na() |> 
+  ggplot() +
+  geom_sf(aes(fill = anomaly_xco2), color = "transparent", size = .05) +
+  geom_sf(data = citys |> filter(abbrev_state == "SP"), 
+          fill = "transparent", size = 3, color = "black", lwd = .05) +
+  geom_sf(data = pontos_destaque, 
+          aes(color = tipo), size = 3, shape = 21, fill = "white", stroke = 1.2) +
+  
+  # Escalas e temas
+  scale_fill_viridis_c(option = "inferno") +
+  scale_color_manual(values = c("hotspot" = "red", "coldspot" = "blue")) +
+  labs(
+    fill = "mean_anomaly_xco2",
+    color = "Tipo",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = rel(.9), color = "black"),
+    axis.title.x = element_text(size = rel(1.1), color = "black"),
+    axis.text.y = element_text(size = rel(.9), color = "black"),
+    axis.title.y = element_text(size = rel(1.1), color = "black"),
+    legend.text = element_text(size = rel(1), color = "black"),
+    legend.title = element_text(face = 'bold', size = rel(1.2))
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+
+Anomalia para cada estação no período todo (TOP 10 )
+
+``` r
+map(season,~{
+  hotspots <- left_join(
+  citys |> filter(abbrev_state == "SP"),
+  kgr_maps |>
+    filter( season_year ==.x) |> 
+    group_by(city) |> 
+    summarise(
+      xco2_anomaly = mean(xco2_anomaly,na.rm=TRUE)
+    ) |> 
+    rename(name_muni = city),
+  by="name_muni") |>
+    slice_max(xco2_anomaly, n = 10, with_ties = FALSE) |>
+    mutate(tipo = "hotspot")
+  
+  coldspots <- left_join(
+  citys |> filter(abbrev_state == "SP"),
+  kgr_maps |>
+    filter( season_year ==.x) |> 
+    group_by(city) |> 
+    summarise(
+      xco2_anomaly = mean(xco2_anomaly,na.rm=TRUE)
+    ) |> 
+    rename(name_muni = city),
+  by="name_muni") |>
+    slice_min(xco2_anomaly, n = 10, with_ties = FALSE) |>
+    mutate(tipo = "coldspot")
+  
+  # Juntar os pontos de interesse
+  pontos_destaque <- bind_rows(hotspots, coldspots)
+  
+  
+  left_join(
+  citys |> filter(abbrev_state == "SP"),
+  kgr_maps |>
+    filter( season_year ==.x) |> 
+    group_by(city) |> 
+    summarise(
+      xco2_anomaly = mean(xco2_anomaly,na.rm=TRUE)
+    ) |> 
+    rename(name_muni = city),
+  by="name_muni") |> 
+    drop_na() |> 
+    ggplot() +
+    geom_sf(aes(fill=xco2_anomaly), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE, lwd=.05, color="black") +
+    geom_sf(data = pontos_destaque, 
+            aes(color = tipo), size = 3, shape = 21, fill = "white", stroke = 1.2) +
+    scale_fill_viridis_c(option = "inferno") +
+    scale_color_manual(values = c("hotspot" = "red", "coldspot" = "blue")) +
+  theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+  labs(fill = 'xco2_anomaly',
+       x = 'Longitude',
+       y = 'Latitude',
+       title = .x)})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-9.png)<!-- -->
+
+    #> 
+    #> [[10]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-10.png)<!-- -->
+
+    #> 
+    #> [[11]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-11.png)<!-- -->
+
+    #> 
+    #> [[12]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-12.png)<!-- -->
+
+    #> 
+    #> [[13]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-13.png)<!-- -->
+
+    #> 
+    #> [[14]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-14.png)<!-- -->
+
+    #> 
+    #> [[15]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-15.png)<!-- -->
+
+    #> 
+    #> [[16]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-16.png)<!-- -->
+
+    #> 
+    #> [[17]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-17.png)<!-- -->
+
+    #> 
+    #> [[18]]
+
+![](README_files/figure-gfm/unnamed-chunk-39-18.png)<!-- -->
+
+### 4) Análise de reconhecimento de padrões
 
 #### Por season (Dry vs Rainy)
 
 ``` r
 nome_periodo <- c("Dry","Rainy")
 vetor_de_grupos<-c(2,4)
-for( i in 1:2){
+for(i in 1:2){
   kgr_maps_wider <- kgr_maps |> 
     mutate(
       season = str_sub(season_year,1,5),
       period = as.numeric(str_sub(season_year,7,7))
-      ) |>
-    filter( period == i) |> 
-    select(season, X,Y,city,xco2) |> 
+    ) |>
+    filter(period == i) |> 
+    select(season, X,Y,city,xco2_anomaly) |> 
     group_by(season, city) |> 
-    summarise(xco2 = mean(xco2, na.rm = TRUE)) |> 
+    summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE)) |> 
     pivot_wider(names_from = season,
-                values_from = xco2,names_prefix = "season_") 
-  
+                values_from = xco2_anomaly,names_prefix = "season_")
   name_muni <- kgr_maps_wider |> pull(city)
   kgr_maps_wider_xco2 <- kgr_maps_wider |> 
     select(season_15_16:season_23_24) #|> 
-    # select(ends_with("2"))
-    
+  # select(ends_with("2"))
+  
   mc <- cor(kgr_maps_wider_xco2)
   corrplot::corrplot(mc)
   da_pad<-decostand(kgr_maps_wider_xco2, 
@@ -785,61 +1306,61 @@ for( i in 1:2){
        cex=.6,lwd=1.5);box()
   grupo<-cutree(da_pad_euc_ward,vetor_de_grupos[i])
   
-  city_kgr_beta_group <- city_kgr_beta |> 
+  city_kgr_beta_group <- city_kgr_beta_anom |> 
     left_join(
       tibble(name_muni, grupo),
-             by="name_muni")
+      by="name_muni")
   
   plot_cidades_agrupamento <- city_kgr_beta_group  |>
     drop_na() |> 
-       ggplot() +
-       geom_sf(aes(fill=grupo), color="transparent",
-               size=.05, show.legend = TRUE)  +
+    ggplot() +
+    geom_sf(aes(fill=grupo), color="transparent",
+            size=.05, show.legend = TRUE)  +
     geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
-       theme_bw() +
-     theme(
-       axis.text.x = element_text(size = rel(.9), color = "black"),
-       axis.title.x = element_text(size = rel(1.1), color = "black"),
-       axis.text.y = element_text(size = rel(.9), color = "black"),
-       axis.title.y = element_text(size = rel(1.1), color = "black"),
-       legend.text = element_text(size = rel(1), color = "black"),
-       legend.title = element_text(face = 'bold', size = rel(1.2))
-       ) +
-     labs(fill = 'Agrupamento',
-           x = 'Longitude',
-           y = 'Latitude',
-          title = nome_periodo[i]) +
-       scale_fill_viridis_c()
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude',
+         title = nome_periodo[i]) +
+    scale_fill_viridis_c()
   print(plot_cidades_agrupamento)
 }
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-29-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-29-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-29-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-29-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-29-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-40-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-6.png)<!-- -->
 
-#### Por Média anual
+#### Por Média anual anomalia
 
 ``` r
 kgr_maps_wider <- kgr_maps |> 
-  select(season_year, X,Y,city,xco2) |> 
+  select(season_year, X,Y,city,xco2_anomaly) |> 
   mutate(season = str_sub(season_year,1,5)) |> 
   group_by(season, city) |> 
-  summarise(xco2 = mean(xco2, na.rm = TRUE)) |> 
+  summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE)) |> 
   pivot_wider(names_from = season,
-              values_from = xco2,names_prefix = "season_")
+              values_from = xco2_anomaly,names_prefix = "season_")
 
 name_muni <- kgr_maps_wider |> pull(city)
-kgr_maps_wider_xco2 <- kgr_maps_wider |> 
+kgr_maps_wider_xco2_anomaly <- kgr_maps_wider |> 
   select(season_15_16:season_23_24) #|> 
   # select(ends_with("2"))
   
-mc <- cor(kgr_maps_wider_xco2)
+mc <- cor(kgr_maps_wider_xco2_anomaly)
 corrplot::corrplot(mc)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
 
 ``` r
-da_pad<-decostand(kgr_maps_wider_xco2, 
+da_pad<-decostand(kgr_maps_wider_xco2_anomaly, 
                   method = "standardize",
                   na.rm=TRUE)
 da_pad_euc<-vegdist(da_pad,"euclidean") 
@@ -851,12 +1372,12 @@ plot(da_pad_euc_ward,
      cex=.6,lwd=1.5);box()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-30-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-41-2.png)<!-- -->
 
 ``` r
 grupo<-cutree(da_pad_euc_ward,4)
 
-city_kgr_beta_group <- city_kgr_beta |> 
+city_kgr_beta_group <- city_kgr_beta_anom |> 
   left_join(
     tibble(name_muni, grupo),
            by="name_muni")
@@ -883,13 +1404,12 @@ city_kgr_beta_group  |>
      scale_fill_viridis_d()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-30-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-41-3.png)<!-- -->
 
 ## Entrando com o uso do solo
 
 ``` r
 land_use_change <- read_rds("data/grid-kgr_luc.rds") 
-
 glimpse(land_use_change)
 #> Rows: 78,210
 #> Columns: 7
@@ -900,17 +1420,10 @@ glimpse(land_use_change)
 #> $ year      <dbl> 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2015, …
 #> $ cover     <dbl> 21, 21, 21, 21, 21, 21, 21, 21, 21, 3, 3, 3, 3, 3, 3, 3, 3, …
 #> $ descricao <chr> "Mosaic of Uses", "Mosaic of Uses", "Mosaic of Uses", "Mosai…
-land_use_change |> 
-  filter(year == 2015) |> 
-  ggplot(aes(x=longitude, y=latitude)) +
-  geom_point()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
-
 ``` r
-
-kgr_maps_cover <- kgr_maps |> 
+kgr_maps_cover <- kgr_maps |> ungroup() |> 
   mutate(
     year = str_sub(season_year,1,2) |> as.numeric() +2000,
     season = str_sub(season_year,-1) |> as.numeric(),
@@ -951,7 +1464,7 @@ kgr_maps_cover |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-31-2.png)<!-- --> \###
+![](README_files/figure-gfm/unnamed-chunk-43-1.png)<!-- --> \###
 Estatísticas descritivas por classe de uso do solo
 
 ``` r
@@ -976,7 +1489,7 @@ kgr_maps_cover |>
   )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
 
 Retirando os top 7 usos do solo no estado.
 
@@ -986,6 +1499,7 @@ my_top_7_cover <- kgr_maps_cover |>
   group_by(year, cover) |> 
   summarise(
     count= n(),
+    .groups = "drop"
   ) |> 
   mutate(
     perc = count/sum(count),
@@ -994,7 +1508,7 @@ my_top_7_cover <- kgr_maps_cover |>
   pull(cover) |> unique()
 ```
 
-Estatísticia descritiva de xCO2 para cada classe uso por season
+Estatística descritiva de xCO2 para cada classe uso por season
 
 ``` r
 kgr_maps_cover |> 
@@ -1013,7 +1527,7 @@ kgr_maps_cover |>
   theme_ridges()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-46-1.png)<!-- -->
 
 ``` r
 kgr_maps_cover |>
@@ -1031,6 +1545,7 @@ kgr_maps_cover |>
     STD_DV = sd(xco2),
     SKW = agricolae::skewness(xco2),
     KRT = agricolae::kurtosis(xco2),
+    .groups = "drop"
   ) |>
   writexl::write_xlsx("output/estat-desc-year-season-cover.xlsx")
 ```
@@ -1055,7 +1570,7 @@ kgr_maps_cover |>
   scale_fill_viridis_d(option = "A")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-36-1.png)<!-- --> \### Análise
+![](README_files/figure-gfm/unnamed-chunk-48-1.png)<!-- --> \### Análise
 de variância (ANOVA ou Kruskal-Wallis)
 
 Comparação de XCO₂ entre diferentes classes de uso do solo.
@@ -1147,10 +1662,10 @@ for (i in 2015:2023) {
 }
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-6.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-7.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-8.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-9.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-10.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-11.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-12.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-13.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-14.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-15.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-16.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-17.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-37-18.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-6.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-7.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-8.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-9.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-10.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-11.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-12.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-13.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-14.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-15.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-16.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-17.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-18.png)<!-- -->
 
 ``` r
-kgr_maps_beta_cover_group <- kgr_maps_beta |> 
+kgr_maps_beta_cover_group <- kgr_maps_beta_anom |> 
   left_join(
     kgr_maps_cover |> 
       filter(season == 2, year == 2020),
@@ -1178,7 +1693,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-51-1.png)<!-- -->
 
 ``` r
 
@@ -1193,7 +1708,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-39-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-51-2.png)<!-- -->
 
 O arquivo `kgr_maps_beta_cover_group` associa todos os resultados até
 aqui gerados, Betas, krigagem, usos do solo.
@@ -1207,13 +1722,13 @@ kgr_maps_beta_cover_group |>
   group_by(grupo) |> 
   summarise(
     N = n(),
-    MIN = min(beta),
-    MEAN = mean(beta),
-    MEDIAN = median(beta),
-    MAX = max(beta),
-    STD_DV = sd(beta),
-    SKW = agricolae::skewness(beta),
-    KRT = agricolae::kurtosis(beta),
+    MIN = min(beta_xco2),
+    MEAN = mean(beta_xco2),
+    MEDIAN = median(beta_xco2),
+    MAX = max(beta_xco2),
+    STD_DV = sd(beta_xco2),
+    SKW = agricolae::skewness(beta_xco2),
+    KRT = agricolae::kurtosis(beta_xco2),
   )
 #> # A tibble: 4 × 9
 #>   grupo     N     MIN   MEAN MEDIAN   MAX STD_DV    SKW     KRT
@@ -1245,7 +1760,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->
 
 ``` r
 kgr_maps_beta_cover_group |> 
@@ -1253,13 +1768,13 @@ kgr_maps_beta_cover_group |>
     descricao = ifelse(descricao %in% my_top_7_cover,
                          descricao, "Other")
   ) |> 
-  ggplot(aes(x=as_factor(grupo), y=beta, fill=as_factor(grupo))) +
+  ggplot(aes(x=as_factor(grupo), y=anomaly_xco2, fill=as_factor(grupo))) +
   geom_boxplot() +
   scale_fill_viridis_d() +
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->
 
 ``` r
 kgr_maps_beta_cover_group |> 
@@ -1269,7 +1784,7 @@ kgr_maps_beta_cover_group |>
   ) |> 
   ggplot(aes(y=as_factor(grupo))) +
   geom_density_ridges(rel_min_height = 0.03,
-                      aes(x=beta, fill=as_factor(grupo)),
+                      aes(x=anomaly_xco2, fill=as_factor(grupo)),
                       alpha = .6, color = "black"
   ) +
   # scale_fill_cyclical(values = c("#ff8080","#238B45"),
@@ -1277,7 +1792,7 @@ kgr_maps_beta_cover_group |>
   theme_ridges()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-43-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-55-1.png)<!-- -->
 
 ``` r
 # primeiro analisa xCO2
@@ -1289,6 +1804,4 @@ kgr_maps_beta_cover_group |>
 # do que pro interior
 ```
 
-### Calcular a anomalia de xCO2
-
-### Calcular o deslocamento do centro de massa, dessa anomalia, por season nos período
+### Morans Indices I
