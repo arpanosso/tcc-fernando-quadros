@@ -957,7 +957,8 @@ Função para calcular o beta ou a média das anomalias por coordenada
 
 ``` r
 get_my_par <- function(df, par_return = "beta"){
-  x <- seq(0,8.5,0.5)
+  n_end <- nrow(df)/2-.5
+  x <- seq(0,n_end,0.5)
   y <- df$media_xco2
   mod <- lm(y~x)
   beta <- mod$coefficients[[2]]
@@ -1010,7 +1011,7 @@ kgr_maps_beta_anom  |>
   writexl::write_xlsx("output/grid-kgr.xlsx")
 ```
 
-Agrgação de betas e anomalias (médias nos municípios)
+Agregação de betas e anomalias (médias nos municípios)
 
 ``` r
 city_kgr_beta_anom <- left_join(
@@ -1067,6 +1068,73 @@ kgr_maps_beta_anom |>
 
 ![](README_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
 
+### Mapa da Anomalia média até 2018
+
+``` r
+kgr_maps_nested_period <- kgr_maps |> 
+  mutate(
+    year = as.numeric(str_sub(season_year,1,2))+2000,
+    period = ifelse(year<=2018,"before-2018","after-2018")) |> 
+  group_by(period,season_year,X,Y) |>
+  summarise(
+    media_xco2 = mean(xco2,na.rm = TRUE),
+    media_xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE),
+    desv_pad = mean(xco2_std),
+    .groups = "drop"
+  ) |>
+  group_by(period,X,Y) |>
+  nest() |>
+  ungroup()
+```
+
+``` r
+kgr_maps_beta_anom_period <- kgr_maps_nested_period |>
+  mutate(
+    beta_xco2 = map(data,get_my_par,par_return="beta"),
+    anomaly_xco2 = map(data,get_my_par,par_return="anomaly")
+  ) |>
+  select(-data) |>
+  unnest(cols = c(beta_xco2,anomaly_xco2))
+
+kgr_maps_beta_anom_period <- kgr_maps_beta_anom_period |> 
+  left_join(
+    grid_geral,
+  by=c("X","Y")
+  )
+
+kgr_maps_beta_anom_period |>
+  filter(period == "before-2018") |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = anomaly_xco2)) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="mean_anomaly_xco2") +
+  theme_bw() +
+  labs(title="Anomalia média de XCO2 antes de 2018")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
+
+``` r
+kgr_maps_beta_anom_period |>
+  filter(period == "after-2018") |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = anomaly_xco2)) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="mean_anomaly_xco2") +
+  theme_bw() +
+  labs(title="Anomalia média de XCO2 após de 2018")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-40-1.png)<!-- -->
+
+### Mapa da Anomalia média após 2018
+
 Anomalia média municipal
 
 ``` r
@@ -1110,7 +1178,7 @@ city_kgr_beta_anom |>
   )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
 
 Anomalia para cada estação no período todo (TOP 10 )
 
@@ -1181,92 +1249,92 @@ map(season,~{
 #> [[1]]
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
 
     #> 
     #> [[2]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-2.png)<!-- -->
 
     #> 
     #> [[3]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-3.png)<!-- -->
 
     #> 
     #> [[4]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-4.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-4.png)<!-- -->
 
     #> 
     #> [[5]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-5.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-5.png)<!-- -->
 
     #> 
     #> [[6]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-6.png)<!-- -->
 
     #> 
     #> [[7]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-7.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-7.png)<!-- -->
 
     #> 
     #> [[8]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-8.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-8.png)<!-- -->
 
     #> 
     #> [[9]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-9.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-9.png)<!-- -->
 
     #> 
     #> [[10]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-10.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-10.png)<!-- -->
 
     #> 
     #> [[11]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-11.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-11.png)<!-- -->
 
     #> 
     #> [[12]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-12.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-12.png)<!-- -->
 
     #> 
     #> [[13]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-13.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-13.png)<!-- -->
 
     #> 
     #> [[14]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-14.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-14.png)<!-- -->
 
     #> 
     #> [[15]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-15.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-15.png)<!-- -->
 
     #> 
     #> [[16]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-16.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-16.png)<!-- -->
 
     #> 
     #> [[17]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-17.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-17.png)<!-- -->
 
     #> 
     #> [[18]]
 
-![](README_files/figure-gfm/unnamed-chunk-39-18.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-42-18.png)<!-- -->
 
 ### 4) Análise de reconhecimento de padrões
 
@@ -1335,7 +1403,7 @@ for(i in 1:2){
 }
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-40-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-40-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-43-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-43-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-43-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-43-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-43-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-43-6.png)<!-- -->
 
 #### Por Média anual anomalia
 
@@ -1357,7 +1425,7 @@ mc <- cor(kgr_maps_wider_xco2_anomaly)
 corrplot::corrplot(mc)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
 
 ``` r
 da_pad<-decostand(kgr_maps_wider_xco2_anomaly, 
@@ -1372,7 +1440,7 @@ plot(da_pad_euc_ward,
      cex=.6,lwd=1.5);box()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-41-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-44-2.png)<!-- -->
 
 ``` r
 grupo<-cutree(da_pad_euc_ward,4)
@@ -1404,7 +1472,7 @@ city_kgr_beta_group  |>
      scale_fill_viridis_d()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-41-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-44-3.png)<!-- -->
 
 ## Entrando com o uso do solo
 
@@ -1464,7 +1532,7 @@ kgr_maps_cover |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-43-1.png)<!-- --> \###
+![](README_files/figure-gfm/unnamed-chunk-46-1.png)<!-- --> \###
 Estatísticas descritivas por classe de uso do solo
 
 ``` r
@@ -1489,7 +1557,7 @@ kgr_maps_cover |>
   )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-47-1.png)<!-- -->
 
 Retirando os top 7 usos do solo no estado.
 
@@ -1527,7 +1595,7 @@ kgr_maps_cover |>
   theme_ridges()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-46-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->
 
 ``` r
 kgr_maps_cover |>
@@ -1570,7 +1638,7 @@ kgr_maps_cover |>
   scale_fill_viridis_d(option = "A")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-48-1.png)<!-- --> \### Análise
+![](README_files/figure-gfm/unnamed-chunk-51-1.png)<!-- --> \### Análise
 de variância (ANOVA ou Kruskal-Wallis)
 
 Comparação de XCO₂ entre diferentes classes de uso do solo.
@@ -1662,7 +1730,7 @@ for (i in 2015:2023) {
 }
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-6.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-7.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-8.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-9.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-10.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-11.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-12.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-13.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-14.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-15.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-16.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-17.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-49-18.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-52-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-6.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-7.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-8.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-9.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-10.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-11.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-12.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-13.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-14.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-15.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-16.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-17.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-52-18.png)<!-- -->
 
 ``` r
 kgr_maps_beta_cover_group <- kgr_maps_beta_anom |> 
@@ -1693,7 +1761,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-51-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->
 
 ``` r
 
@@ -1708,7 +1776,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-51-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-54-2.png)<!-- -->
 
 O arquivo `kgr_maps_beta_cover_group` associa todos os resultados até
 aqui gerados, Betas, krigagem, usos do solo.
@@ -1760,7 +1828,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-56-1.png)<!-- -->
 
 ``` r
 kgr_maps_beta_cover_group |> 
@@ -1774,7 +1842,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-57-1.png)<!-- -->
 
 ``` r
 kgr_maps_beta_cover_group |> 
@@ -1792,7 +1860,7 @@ kgr_maps_beta_cover_group |>
   theme_ridges()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-55-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-58-1.png)<!-- -->
 
 ``` r
 # primeiro analisa xCO2

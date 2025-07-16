@@ -664,7 +664,8 @@ Função para calcular o beta ou a média das anomalias por coordenada
 
 ```{r}
 get_my_par <- function(df, par_return = "beta"){
-  x <- seq(0,8.5,0.5)
+  n_end <- nrow(df)/2-.5
+  x <- seq(0,n_end,0.5)
   y <- df$media_xco2
   mod <- lm(y~x)
   beta <- mod$coefficients[[2]]
@@ -712,7 +713,7 @@ kgr_maps_beta_anom  |>
   writexl::write_xlsx("output/grid-kgr.xlsx")
 ```
 
-Agrgação de betas e anomalias (médias nos municípios)
+Agregação de betas e anomalias (médias nos municípios)
 
 ```{r}
 city_kgr_beta_anom <- left_join(
@@ -764,6 +765,74 @@ kgr_maps_beta_anom |>
        fill="mean_anomaly_xco2") +
   theme_bw()
 ```
+
+
+### Mapa da Anomalia média até 2018
+
+```{r}
+kgr_maps_nested_period <- kgr_maps |> 
+  mutate(
+    year = as.numeric(str_sub(season_year,1,2))+2000,
+    period = ifelse(year<=2018,"before-2018","after-2018")) |> 
+  group_by(period,season_year,X,Y) |>
+  summarise(
+    media_xco2 = mean(xco2,na.rm = TRUE),
+    media_xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE),
+    desv_pad = mean(xco2_std),
+    .groups = "drop"
+  ) |>
+  group_by(period,X,Y) |>
+  nest() |>
+  ungroup()
+
+```
+
+```{r}
+kgr_maps_beta_anom_period <- kgr_maps_nested_period |>
+  mutate(
+    beta_xco2 = map(data,get_my_par,par_return="beta"),
+    anomaly_xco2 = map(data,get_my_par,par_return="anomaly")
+  ) |>
+  select(-data) |>
+  unnest(cols = c(beta_xco2,anomaly_xco2))
+
+kgr_maps_beta_anom_period <- kgr_maps_beta_anom_period |> 
+  left_join(
+    grid_geral,
+  by=c("X","Y")
+  )
+
+kgr_maps_beta_anom_period |>
+  filter(period == "before-2018") |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = anomaly_xco2)) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="mean_anomaly_xco2") +
+  theme_bw() +
+  labs(title="Anomalia média de XCO2 antes de 2018")
+```
+
+```{r}
+kgr_maps_beta_anom_period |>
+  filter(period == "after-2018") |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = anomaly_xco2)) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="mean_anomaly_xco2") +
+  theme_bw() +
+  labs(title="Anomalia média de XCO2 após de 2018")
+```
+
+
+### Mapa da Anomalia média após 2018
+
+
 
 
 Anomalia média municipal
