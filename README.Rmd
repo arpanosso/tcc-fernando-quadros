@@ -578,7 +578,7 @@ map(season,~{
 })
 ```
 
-### Padrões espaciais de Anomalia de XCO2 paa o estado por estação
+### Padrões espaciais de Anomalia de XCO2 para o estado por estação
 
 
 ```{r}
@@ -602,44 +602,44 @@ map(season,~{
 ```{r}
 map(season,~{
   
-# Identificar hotspots 
-hotspots <- kgr_maps |>
-  filter(season_year == .x) |> 
-  slice_max(xco2_anomaly, n = 5, with_ties = FALSE) |>
-  mutate(tipo = "hotspot")  
-
-coldspots <- kgr_maps |>
-  filter(season_year == .x) |> 
-  slice_min(xco2_anomaly, n = 5, with_ties = FALSE) |>
-  mutate(tipo = "coldspot")  
-
-pontos_destaque <- bind_rows(hotspots, coldspots)
-
-kgr_maps |> 
-  filter(season_year == .x) |> 
-  ggplot(aes(x = X, y = Y)) +
-  geom_tile(aes(fill = xco2_anomaly)) +
-  geom_point(data = pontos_destaque,
-             aes(x = X, y = Y, color = tipo),
-             shape = 21, size = 3, fill = "white", stroke = 1.2) +
-  scale_color_manual(values = c("hotspot" = "red", "coldspot" = "blue")) +
-  geom_point(
-    data = kgr_maps |> 
-      filter(season_year == .x) |> 
-      filter(xco2_anomaly >0) |>
-      mutate(
-        lon_centro = sum(X*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE),
-        lat_centro = sum(Y*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE)),
-    aes(x = lon_centro, y = lat_centro), 
-             color = "cyan", size = 2.5, shape = 4, stroke = 1.2) +
-  scale_fill_viridis_c(option = "inferno") +
-  coord_equal() +
-  facet_wrap(~ season_year) +
-  labs(
-    x = "Longitude", y = "Latitude", fill = "xco2_anomaly",
-    title = .x
-  ) +
-  theme_bw()
+  # Identificar hotspots 
+  hotspots <- kgr_maps |>
+    filter(season_year == .x) |> 
+    slice_max(xco2_anomaly, n = 5, with_ties = FALSE) |>
+    mutate(tipo = "hotspot")  
+  
+  coldspots <- kgr_maps |>
+    filter(season_year == .x) |> 
+    slice_min(xco2_anomaly, n = 5, with_ties = FALSE) |>
+    mutate(tipo = "coldspot")  
+  
+  pontos_destaque <- bind_rows(hotspots, coldspots)
+  
+  kgr_maps |> 
+    filter(season_year == .x) |> 
+    ggplot(aes(x = X, y = Y)) +
+    geom_tile(aes(fill = xco2_anomaly)) +
+    geom_point(data = pontos_destaque,
+               aes(x = X, y = Y, color = tipo),
+               shape = 21, size = 3, fill = "white", stroke = 1.2) +
+    scale_color_manual(values = c("hotspot" = "red", "coldspot" = "blue")) +
+    geom_point(
+      data = kgr_maps |> 
+        filter(season_year == .x) |> 
+        filter(xco2_anomaly >0) |>
+        mutate(
+          lon_centro = sum(X*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE),
+          lat_centro = sum(Y*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE)),
+      aes(x = lon_centro, y = lat_centro), 
+      color = "cyan", size = 2.5, shape = 4, stroke = 1.2) +
+    scale_fill_viridis_c(option = "inferno") +
+    coord_equal() +
+    facet_wrap(~ season_year) +
+    labs(
+      x = "Longitude", y = "Latitude", fill = "xco2_anomaly",
+      title = .x
+    ) +
+    theme_bw()
 })
 ```
 
@@ -676,7 +676,7 @@ get_my_par <- function(df, par_return = "beta"){
 }
 ```
 
-Càlculo e mapeamento de Beta e Média de anomalias
+Cálculo e mapeamento de Beta e Média de anomalias
 
 ```{r}
 kgr_maps_beta_anom <- kgr_maps_nested |>
@@ -801,7 +801,10 @@ kgr_maps_beta_anom_period <- kgr_maps_beta_anom_period |>
     grid_geral,
   by=c("X","Y")
   )
+```
 
+
+```{r}
 kgr_maps_beta_anom_period |>
   filter(period == "before-2018") |> 
   ggplot(aes(x=X, y=Y)) +
@@ -814,6 +817,8 @@ kgr_maps_beta_anom_period |>
   theme_bw() +
   labs(title="Anomalia média de XCO2 antes de 2018")
 ```
+
+### Mapa da Anomalia média após 2018
 
 ```{r}
 kgr_maps_beta_anom_period |>
@@ -829,11 +834,37 @@ kgr_maps_beta_anom_period |>
   labs(title="Anomalia média de XCO2 após de 2018")
 ```
 
+### Mapa do Beta até 2018
 
-### Mapa da Anomalia média após 2018
+```{r}
+kgr_maps_beta_anom_period |>
+  filter(period == "before-2018") |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = beta_xco2)) +
+  scale_fill_viridis_c() +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="mean_anomaly_xco2") +
+  theme_bw() +
+  labs(title="Beta de XCO2 antes de 2018")
+```
 
+### Mapa do Beta após 2018
 
-
+```{r}
+kgr_maps_beta_anom_period |>
+  filter(period == "after-2018") |> 
+  ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = beta_xco2)) +
+  scale_fill_viridis_c() +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="mean_anomaly_xco2") +
+  theme_bw() +
+  labs(title="Beta de XCO2 após de 2018")
+```
 
 Anomalia média municipal
 
@@ -945,7 +976,6 @@ map(season,~{
        y = 'Latitude',
        title = .x)})
 ```
-
 
 ### 4) Análise de reconhecimento de padrões 
 
@@ -1072,7 +1102,78 @@ city_kgr_beta_group  |>
      scale_fill_viridis_d()
 ```
 
-## Entrando com o uso do solo
+
+#### Por período (até e após 2018)
+
+```{r}
+nome_periodo <- c("before-2018","after-2018")
+vetor_de_grupos<-c(3,3)
+for(i in seq_along(nome_periodo)){
+  
+  kgr_maps_wider <- kgr_maps |> 
+    mutate(
+      year = as.numeric(str_sub(season_year,1,2))+2000,
+      period = ifelse(year<=2018,"before-2018","after-2018")) |> 
+    group_by(period,season_year,X,Y) |>
+    filter(period == nome_periodo[i]) |> 
+    select(period, season_year, X,Y,city,xco2_anomaly) |> 
+    group_by(season_year, period, city) |> 
+    summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE),
+              .groups = "drop") |> 
+    pivot_wider(names_from = season_year,
+                values_from = xco2_anomaly,names_prefix = "season_")
+  
+  name_muni <- kgr_maps_wider |> pull(city)
+  kgr_maps_wider_xco2 <- kgr_maps_wider |> 
+    select(-c(period, city)) #|> 
+  # select(ends_with("2"))
+  
+  mc <- cor(kgr_maps_wider_xco2)
+  corrplot::corrplot(mc)
+  da_pad<-decostand(kgr_maps_wider_xco2, 
+                    method = "standardize",
+                    na.rm=TRUE)
+  da_pad_euc<-vegdist(da_pad,"euclidean") 
+  da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+  plot(da_pad_euc_ward, 
+       ylab="Distância Euclidiana",
+       xlab="Acessos", hang=-1,
+       col="blue", las=1,
+       cex=.6,lwd=1.5);box()
+  grupo<-cutree(da_pad_euc_ward,vetor_de_grupos[i])
+  
+  city_kgr_beta_group <- city_kgr_beta_anom |> 
+    left_join(
+      tibble(name_muni, grupo),
+      by="name_muni")
+  
+  plot_cidades_agrupamento <- city_kgr_beta_group  |>
+    drop_na() |> 
+    ggplot() +
+    geom_sf(aes(fill=grupo), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude',
+         title = nome_periodo[i]) +
+    scale_fill_viridis_c()
+  print(plot_cidades_agrupamento)
+}
+```
+
+
+
+### 6) Uso da terra
 
 ```{r}
 land_use_change <- read_rds("data/grid-kgr_luc.rds") 
@@ -1111,7 +1212,7 @@ kgr_maps_cover <- kgr_maps |> ungroup() |>
   arrange(year,season,X,Y)
 
 kgr_maps_cover |> 
-  filter(year == 2015) |> 
+  filter(year == 2016) |> 
   mutate(cover = cover |> as_factor()) |> 
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = cover)) +
@@ -1171,6 +1272,7 @@ kgr_maps_cover |>
                          descricao, "Other"),
     season = as_factor(season)
   ) |> 
+  filter(cover_top_7 != "Other") |> 
   ggplot(aes(y=as_factor(year))) +
   geom_density_ridges(rel_min_height = 0.03,
                       aes(x=xco2, fill=season),
@@ -1221,6 +1323,28 @@ kgr_maps_cover |>
   labs(fill="cover") +
   scale_fill_viridis_d(option = "A")
 ```
+
+```{r}
+kgr_maps_cover |>
+   mutate(
+    cover_top_7 = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other"),
+    season = as_factor(season)
+  ) |> 
+  filter( cover_top_7 != "Other") |> 
+  group_by(year,season,cover_top_7) |>
+  ggplot(aes(x=year, y=xco2_anomaly, fill = descricao)) +
+  geom_violin(trim=FALSE) +
+  facet_wrap(~season, ncol=2) +
+  theme(
+    legend.position = "top"
+  ) +
+  theme_bw()+
+  labs(fill="cover") +
+  scale_fill_viridis_d(option = "B")
+```
+
+
 ### Análise de variância (ANOVA ou Kruskal-Wallis)
 
 Comparação de XCO₂ entre diferentes classes de uso do solo.
