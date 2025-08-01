@@ -1516,7 +1516,7 @@ city_kgr_beta_group  |>
 
 ``` r
 nome_periodo <- c("before-2018","after-2018")
-vetor_de_grupos<-c(3,3)
+vetor_de_grupos<-c(2,2)
 for(i in seq_along(nome_periodo)){
   
   kgr_maps_wider <- kgr_maps |> 
@@ -1930,12 +1930,11 @@ kgr_maps_beta_cover_group |>
     SKW = agricolae::skewness(beta_xco2),
     KRT = agricolae::kurtosis(beta_xco2),
   )
-#> # A tibble: 3 × 9
-#>   grupo     N     MIN   MEAN MEDIAN   MAX STD_DV    SKW    KRT
-#>   <int> <int>   <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl>  <dbl>
-#> 1     1  4027 -0.159  0.0569 0.0605 0.199 0.0524 -0.674  1.30 
-#> 2     2  2077 -0.0562 0.111  0.117  0.270 0.0567 -0.225 -0.233
-#> 3     3  2586  0.0159 0.114  0.108  0.295 0.0450  0.697  0.523
+#> # A tibble: 2 × 9
+#>   grupo     N     MIN   MEAN MEDIAN   MAX STD_DV    SKW   KRT
+#>   <int> <int>   <dbl>  <dbl>  <dbl> <dbl>  <dbl>  <dbl> <dbl>
+#> 1     1  4027 -0.159  0.0569 0.0605 0.199 0.0524 -0.674 1.30 
+#> 2     2  4663 -0.0562 0.113  0.113  0.295 0.0506  0.111 0.225
 ```
 
 ``` r
