@@ -59,25 +59,34 @@ arqui para o estado.
 #   ) |>
 #   filter(flag_sp)
 # write_rds(data_set_sp,"data/nasa-xco2-sp.rds")
-data_set_sp <- read_rds("data/nasa-xco2-sp.rds")
+data_set_sp <- read_rds("data/nasa-xco2-sp.rds") |> 
+  filter(xco2_quality_flag == 0) |> 
+  group_by(year,month) |> 
+  mutate(
+    xco2_anomaly = xco2 - median(xco2, na.rm = TRUE), # com tendência - incorporou a escala
+    .after = xco2
+  ) |> 
+  ungroup()
 ```
 
 #### Existe uma tendência regional nos dados, e ela deve ser retirada para esse trabalho
 
 ``` r
-# data_set_sp |>
-#   sample_n(1000) |>
-#   drop_na() |>
-#   mutate( year = year - min(year)) |>
-#   ggplot(aes(x=year, y=xco2)) +
-#   geom_point() +
-#   geom_point(shape=21,color="black",fill="gray") +
-#   geom_smooth(method = "lm") +
-#   stat_regline_equation(aes(
-#   label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
-#   theme_bw() +
-#   labs(x="Ano",y="xco2")
+data_set_sp |>
+  sample_n(1000) |>
+  drop_na() |>
+  mutate( year = year - min(year)) |>
+  ggplot(aes(x=year, y=xco2)) +
+  geom_point() +
+  geom_point(shape=21,color="black",fill="gray") +
+  geom_smooth(method = "lm") +
+  stat_regline_equation(aes(
+  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
+  theme_bw() +
+  labs(x="Ano",y="xco2")
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 #### Análise de regressão linear simples para caracterização da tendência.
 
@@ -145,11 +154,11 @@ data_set_sp <- data_set_sp |>
       epoch = str_remove(season_year,"dry_|rainy_")) |> 
     filter(season_year != "rainy_2014-2015",
          epoch != "14:15") |> 
-  group_by(season_year) |> 
-  mutate(
-    xco2_anomaly = xco2 - median(xco2, na.rm = TRUE),
-    .after = xco2
-  ) |> 
+  # group_by(season_year) |> 
+  # mutate(
+  #   xco2_anomaly = xco2 - median(xco2, na.rm = TRUE),
+  #   .after = xco2
+  # ) |> 
   ungroup()
 ```
 
