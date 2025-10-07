@@ -514,11 +514,8 @@ O melhor modelo é aquele que apresenta um coeficiente de regressão o mais pró
 #   mutate(var1.var = sqrt(var1.var))
 # write_rds(df,paste0("output/maps-kgr/kgr-anom_xco2-",str_replace(my_season,"\\:","_"),".rds"))
 ```
-<<<<<<< HEAD
-<!--
-=======
 
->>>>>>> 18561c3908fcfee08200985efae5360d2a4492da
+
 #### Compilação de todos os mapas gerados
 
 ```{r}
@@ -529,27 +526,32 @@ list_rds <- list.files("output/maps-kgr/",
 rds_reader <- function(path){
   readr::read_rds(path) |>
     mutate(
-    path = stringr::str_remove(path,"output/maps-kgr/kgr-xco2-|\\.rds"),
-    epoch = stringr::str_sub(path,1,1),
+    path = stringr::str_remove(path,"output/maps-kgr/kgr-|\\.rds"),
+    epoch = str_extract(path, "(?<=-)[^_]+") ,
     season = stringr::str_sub(path,-9,-5),
-    epoch_n = ifelse(epoch == "d",1,2),
-    season_year = paste0(season,"_",epoch_n)
+    epoch_n = ifelse(epoch == "dry",1,2),
+    season_year = paste0(season,"_",epoch_n),
+    variable = str_extract(path, "^[^-]+")
     # variable = stringr::str_extract(path, "^[^\\-]+")
      ) |>
     rename(
-       xco2 = var1.pred, 
-       xco2_std = var1.var
+       value = var1.pred, 
+       std = var1.var
     )  |>
-    select(-path,-(epoch:epoch_n))
-}
+    select(-c(path,epoch:epoch_n))
+}; rds_reader(list_rds[2])
+```
 
-kgr_maps <- map_df(list_rds, rds_reader)
 
-kgr_maps <- kgr_maps |> 
-  group_by(season_year) |> 
-  mutate(xco2_anomaly = xco2 - median(xco2,na.rm=TRUE),
-         .after = xco2)
+```{r}
+kgr_maps_all <- map_df(list_rds, rds_reader)
+kgr_maps <- kgr_maps_all |> 
+  select(-std) |> 
+  pivot_wider(values_from = value, names_from = variable)
+```
 
+
+```{r}
 kgr_maps |> 
   group_by(season_year) |> 
   ggplot(aes(season_year,xco2)) +
@@ -558,7 +560,7 @@ kgr_maps |>
 
 kgr_maps |> 
   group_by(season_year) |> 
-  ggplot(aes(season_year,xco2_anomaly)) +
+  ggplot(aes(season_year,anom_xco2)) +
   geom_boxplot(fill="orange")+
   theme_bw()
 ```
@@ -599,12 +601,12 @@ map(season,~{
   kgr_maps |> 
     filter( season_year == .x) |> 
     ggplot(aes(x=X, y=Y)) +
-  geom_tile(aes(fill = xco2_anomaly)) +
+  geom_tile(aes(fill = anom_xco2)) +
   scale_fill_viridis_c(option = "inferno") +
   coord_equal() +
   labs(x="Longitude",
        y="Latitude",
-       fill="xco2_anomaly",
+       fill="anom_xco2",
        title = .x) +
   theme_bw()
 })
@@ -618,12 +620,12 @@ map(season,~{
   # Identificar hotspots 
   hotspots <- kgr_maps |>
     filter(season_year == .x) |> 
-    slice_max(xco2_anomaly, n = 5, with_ties = FALSE) |>
+    slice_max(anom_xco2, n = 5, with_ties = FALSE) |>
     mutate(tipo = "hotspot")  
   
   coldspots <- kgr_maps |>
     filter(season_year == .x) |> 
-    slice_min(xco2_anomaly, n = 5, with_ties = FALSE) |>
+    slice_min(anom_xco2, n = 5, with_ties = FALSE) |>
     mutate(tipo = "coldspot")  
   
   pontos_destaque <- bind_rows(hotspots, coldspots)
@@ -631,7 +633,7 @@ map(season,~{
   kgr_maps |> 
     filter(season_year == .x) |> 
     ggplot(aes(x = X, y = Y)) +
-    geom_tile(aes(fill = xco2_anomaly)) +
+    geom_tile(aes(fill = anom_xco2)) +
     geom_point(data = pontos_destaque,
                aes(x = X, y = Y, color = tipo),
                shape = 21, size = 3, fill = "white", stroke = 1.2) +
@@ -639,17 +641,17 @@ map(season,~{
     geom_point(
       data = kgr_maps |> 
         filter(season_year == .x) |> 
-        filter(xco2_anomaly >0) |>
+        filter(anom_xco2 >0) |>
         mutate(
-          lon_centro = sum(X*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE),
-          lat_centro = sum(Y*xco2_anomaly, na.rm = TRUE)/sum(xco2_anomaly, na.rm = TRUE)),
+          lon_centro = sum(X*anom_xco2, na.rm = TRUE)/sum(anom_xco2, na.rm = TRUE),
+          lat_centro = sum(Y*anom_xco2, na.rm = TRUE)/sum(anom_xco2, na.rm = TRUE)),
       aes(x = lon_centro, y = lat_centro), 
       color = "cyan", size = 2.5, shape = 4, stroke = 1.2) +
     scale_fill_viridis_c(option = "inferno") +
     coord_equal() +
     facet_wrap(~ season_year) +
     labs(
-      x = "Longitude", y = "Latitude", fill = "xco2_anomaly",
+      x = "Longitude", y = "Latitude", fill = "anom_xco2",
       title = .x
     ) +
     theme_bw()
@@ -664,8 +666,8 @@ kgr_maps_nested <- kgr_maps |>
   group_by(season_year,X,Y) |>
   summarise(
     media_xco2 = mean(xco2,na.rm = TRUE),
-    media_xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE),
-    desv_pad = mean(xco2_std),
+    media_xco2_anomaly = mean(anom_xco2, na.rm = TRUE),
+    # desv_pad = mean(xco2_std),
     .groups = "drop"
   ) |>
   group_by(X,Y) |>
@@ -735,7 +737,7 @@ city_kgr_beta_anom <- left_join(
     group_by(city) |> 
     summarise(
       beta_xco2 = mean(beta_xco2),
-      anomaly_xco2 = mean(anomaly_xco2)
+      anom_xco2 = mean(anomaly_xco2)
     ) |> 
     rename(name_muni = city),
            by="name_muni")
@@ -790,8 +792,8 @@ kgr_maps_nested_period <- kgr_maps |>
   group_by(period,season_year,X,Y) |>
   summarise(
     media_xco2 = mean(xco2,na.rm = TRUE),
-    media_xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE),
-    desv_pad = mean(xco2_std),
+    media_xco2_anomaly = mean(anom_xco2, na.rm = TRUE),
+    # desv_pad = mean(xco2_std),
     .groups = "drop"
   ) |>
   group_by(period,X,Y) |>
@@ -883,11 +885,11 @@ Anomalia média municipal
 
 ```{r}
 hotspots <- city_kgr_beta_anom |>
-  slice_max(anomaly_xco2, n = 5, with_ties = FALSE) |>
+  slice_max(anom_xco2, n = 5, with_ties = FALSE) |>
   mutate(tipo = "hotspot")
 
 coldspots <- city_kgr_beta_anom |>
-  slice_min(anomaly_xco2, n = 5, with_ties = FALSE) |>
+  slice_min(anom_xco2, n = 5, with_ties = FALSE) |>
   mutate(tipo = "coldspot")
 
 # Juntar os pontos de interesse
@@ -896,7 +898,7 @@ pontos_destaque <- bind_rows(hotspots, coldspots)
 city_kgr_beta_anom |>
   drop_na() |> 
   ggplot() +
-  geom_sf(aes(fill = anomaly_xco2), color = "transparent", size = .05) +
+  geom_sf(aes(fill = anom_xco2), color = "transparent", size = .05) +
   geom_sf(data = citys |> filter(abbrev_state == "SP"), 
           fill = "transparent", size = 3, color = "black", lwd = .05) +
   geom_sf(data = pontos_destaque, 
@@ -932,11 +934,11 @@ map(season,~{
     filter( season_year ==.x) |> 
     group_by(city) |> 
     summarise(
-      xco2_anomaly = mean(xco2_anomaly,na.rm=TRUE)
+      anom_xco2 = mean(anom_xco2,na.rm=TRUE)
     ) |> 
     rename(name_muni = city),
   by="name_muni") |>
-    slice_max(xco2_anomaly, n = 10, with_ties = FALSE) |>
+    slice_max(anom_xco2, n = 10, with_ties = FALSE) |>
     mutate(tipo = "hotspot")
   
   coldspots <- left_join(
@@ -945,11 +947,11 @@ map(season,~{
     filter( season_year ==.x) |> 
     group_by(city) |> 
     summarise(
-      xco2_anomaly = mean(xco2_anomaly,na.rm=TRUE)
+      anom_xco2 = mean(anom_xco2,na.rm=TRUE)
     ) |> 
     rename(name_muni = city),
   by="name_muni") |>
-    slice_min(xco2_anomaly, n = 10, with_ties = FALSE) |>
+    slice_min(anom_xco2, n = 10, with_ties = FALSE) |>
     mutate(tipo = "coldspot")
   
   # Juntar os pontos de interesse
@@ -959,19 +961,19 @@ map(season,~{
   left_join(
   citys |> filter(abbrev_state == "SP"),
   kgr_maps |>
-    filter( season_year ==.x) |> 
-    group_by(city) |> 
+    filter( season_year ==.x) |>
+    group_by(city) |>
     summarise(
-      xco2_anomaly = mean(xco2_anomaly,na.rm=TRUE)
-    ) |> 
+      xco2_anomaly = mean(anom_xco2,na.rm=TRUE)
+    ) |>
     rename(name_muni = city),
-  by="name_muni") |> 
-    drop_na() |> 
+  by="name_muni") |>
+    drop_na() |>
     ggplot() +
     geom_sf(aes(fill=xco2_anomaly), color="transparent",
             size=.05, show.legend = TRUE)  +
     geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE, lwd=.05, color="black") +
-    geom_sf(data = pontos_destaque, 
+    geom_sf(data = pontos_destaque,
             aes(color = tipo), size = 3, shape = 21, fill = "white", stroke = 1.2) +
     scale_fill_viridis_c(option = "inferno") +
     scale_color_manual(values = c("hotspot" = "red", "coldspot" = "blue")) +
@@ -987,7 +989,8 @@ map(season,~{
   labs(fill = 'xco2_anomaly',
        x = 'Longitude',
        y = 'Latitude',
-       title = .x)})
+       title = .x)
+  })
 ```
 
 ### 4) Análise de reconhecimento de padrões 
@@ -996,7 +999,7 @@ map(season,~{
 
 ```{r}
 nome_periodo <- c("Dry","Rainy")
-vetor_de_grupos<-c(2,4)
+vetor_de_grupos<-c(2,2)
 for(i in 1:2){
   kgr_maps_wider <- kgr_maps |> 
     mutate(
@@ -1004,11 +1007,11 @@ for(i in 1:2){
       period = as.numeric(str_sub(season_year,7,7))
     ) |>
     filter(period == i) |> 
-    select(season, X,Y,city,xco2_anomaly) |> 
+    select(season, X,Y,city,anom_xco2) |> 
     group_by(season, city) |> 
-    summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE)) |> 
+    summarise(anom_xco2 = mean(anom_xco2, na.rm = TRUE)) |> 
     pivot_wider(names_from = season,
-                values_from = xco2_anomaly,names_prefix = "season_")
+                values_from = anom_xco2,names_prefix = "season_")
   name_muni <- kgr_maps_wider |> pull(city)
   kgr_maps_wider_xco2 <- kgr_maps_wider |> 
     select(season_15_16:season_23_24) #|> 
@@ -1062,12 +1065,12 @@ for(i in 1:2){
 
 ```{r}
 kgr_maps_wider <- kgr_maps |> 
-  select(season_year, X,Y,city,xco2_anomaly) |> 
+  select(season_year, X,Y,city,anom_xco2) |> 
   mutate(season = str_sub(season_year,1,5)) |> 
   group_by(season, city) |> 
-  summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE)) |> 
+  summarise(anom_xco2 = mean(anom_xco2, na.rm = TRUE)) |> 
   pivot_wider(names_from = season,
-              values_from = xco2_anomaly,names_prefix = "season_")
+              values_from = anom_xco2,names_prefix = "season_")
 
 name_muni <- kgr_maps_wider |> pull(city)
 kgr_maps_wider_xco2_anomaly <- kgr_maps_wider |> 
@@ -1086,7 +1089,7 @@ plot(da_pad_euc_ward,
      xlab="Acessos", hang=-1,
      col="blue", las=1,
      cex=.6,lwd=1.5);box()
-grupo<-cutree(da_pad_euc_ward,4)
+grupo<-cutree(da_pad_euc_ward,2)
 
 city_kgr_beta_group <- city_kgr_beta_anom |> 
   left_join(
@@ -1115,7 +1118,7 @@ city_kgr_beta_group  |>
      scale_fill_viridis_d()
 ```
 
-
+<!--
 #### Por período (até e após 2018)
 
 ```{r}
@@ -1129,12 +1132,12 @@ for(i in seq_along(nome_periodo)){
       period = ifelse(year<=2018,"before-2018","after-2018")) |> 
     group_by(period,season_year,X,Y) |>
     filter(period == nome_periodo[i]) |> 
-    select(period, season_year, X,Y,city,xco2_anomaly) |> 
+    select(period, season_year, X,Y,city,anom_xco2) |> 
     group_by(season_year, period, city) |> 
-    summarise(xco2_anomaly = mean(xco2_anomaly, na.rm = TRUE),
+    summarise(anom_xco2 = mean(anom_xco2, na.rm = TRUE),
               .groups = "drop") |> 
     pivot_wider(names_from = season_year,
-                values_from = xco2_anomaly,names_prefix = "season_")
+                values_from = anom_xco2,names_prefix = "season_")
   
   name_muni <- kgr_maps_wider |> pull(city)
   kgr_maps_wider_xco2 <- kgr_maps_wider |> 
@@ -1184,7 +1187,7 @@ for(i in seq_along(nome_periodo)){
 }
 ```
 
-
+-->
 
 ### 6) Uso da terra
 
@@ -1346,7 +1349,7 @@ kgr_maps_cover |>
   ) |> 
   filter( cover_top_7 != "Other") |> 
   group_by(year,season,cover_top_7) |>
-  ggplot(aes(x=year, y=xco2_anomaly, fill = descricao)) +
+  ggplot(aes(x=year, y=anom_xco2, fill = descricao)) +
   geom_violin(trim=FALSE) +
   facet_wrap(~season, ncol=2) +
   theme(
@@ -1447,8 +1450,9 @@ for (i in 2015:2023) {
     print(plot_tukey)
   }
 }
-
 ```
+
+
 ```{r}
 kgr_maps_beta_cover_group <- kgr_maps_beta_anom |> 
   left_join(
@@ -1463,7 +1467,7 @@ kgr_maps_beta_cover_group <- kgr_maps_beta_anom |>
       rename(city = name_muni),
     by=c("city")
     ) |> 
-  select(-xco2, -xco2_std, -year, -season_year, -season)
+  select(-xco2, -anom_xco2, -year, -season_year, -season)
 ```
 
 ```{r}
@@ -1573,8 +1577,4 @@ kgr_maps_beta_cover_group |>
 
 ### Morans Indices I
 
-<<<<<<< HEAD
--->
-=======
 
->>>>>>> 18561c3908fcfee08200985efae5360d2a4492da

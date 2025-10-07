@@ -20,7 +20,7 @@
 # biomes <- geobr::read_biomes(showProgress = FALSE)
 # conservation <- geobr::read_conservation_units(showProgress = FALSE)
 # indigenous <- geobr::read_indigenous_land(showProgress = FALSE)
-# citys <- geobr::read_municipality(showProgress = FALSE)
+citys <- geobr::read_municipality(showProgress = FALSE)
 #
 # cat("Polygons loaded [states, citysbiomes, conservarion and indigenous]\n")
 #
