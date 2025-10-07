@@ -48,7 +48,7 @@ Corrigindo o polígono do Estado de São Paulo.
 ```
 
 Classificando os pontos pertencentes ao estado de São Paulo e gerando um
-arqui para o estado.
+arquivo para o estado.
 
 ``` r
 # data_set_sp <- data_set |>
@@ -503,10 +503,10 @@ df <- ko_variavel |>
 write_rds(df,paste0("output/maps-kgr/kgr-anom_xco2-",str_replace(my_season,"\\:","_"),".rds"))
 ```
 
-<!---
+<!--
 #### Compilação de todos os mapas gerados
 &#10;
-```r
+``` r
 list_rds <- list.files("output/maps-kgr/",
            pattern = ".rds$",
            full.names = TRUE)
@@ -543,7 +543,7 @@ list_rds <- list.files("output/maps-kgr/",
   theme_bw()
 ```
 &#10;
-```r
+``` r
 kgr_maps <- kgr_maps |> 
   left_join(
     grid_geral,
@@ -553,7 +553,7 @@ kgr_maps <- kgr_maps |>
 &#10;
 ### Padrões espaciais de XCO2 para o estado por estação
 &#10;
-```r
+``` r
 season <- kgr_maps |> pull(season_year) |> unique()
 map(season,~{
   kgr_maps |> 
@@ -571,7 +571,7 @@ map(season,~{
 ```
 &#10;### Padrões espaciais de Anomalia de XCO2 para o estado por estação
 &#10;
-&#10;```r
+&#10;``` r
 map(season,~{
   kgr_maps |> 
     filter( season_year == .x) |> 
@@ -588,7 +588,7 @@ map(season,~{
 ```
 &#10;#### Centroide de massa, cold and hotspots
 &#10;
-```r
+``` r
 map(season,~{
   &#10;  # Identificar hotspots 
   hotspots <- kgr_maps |>
@@ -630,7 +630,7 @@ map(season,~{
 &#10;
 ### Cálculos por valor estimado do Beta e das médias das anomalias no período todo
 &#10;
-```r
+``` r
 kgr_maps_nested <- kgr_maps |>
   group_by(season_year,X,Y) |>
   summarise(
@@ -645,7 +645,7 @@ kgr_maps_nested <- kgr_maps |>
 ```
 &#10;Função para calcular o beta ou a média das anomalias por coordenada
 &#10;
-```r
+``` r
 get_my_par <- function(df, par_return = "beta"){
   n_end <- nrow(df)/2-.5
   x <- seq(0,n_end,0.5)
@@ -660,7 +660,7 @@ get_my_par <- function(df, par_return = "beta"){
 ```
 &#10;Cálculo e mapeamento de Beta e Média de anomalias
 &#10;
-```r
+``` r
 kgr_maps_beta_anom <- kgr_maps_nested |>
   mutate(
     beta_xco2 = map(data,get_my_par,par_return="beta"),
@@ -676,7 +676,7 @@ kgr_maps_beta_anom <- kgr_maps_nested |>
 ```
 &#10;Mapa do Beta
 &#10;
-```r
+``` r
 kgr_maps_beta_anom |>
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = beta_xco2)) +
@@ -693,7 +693,7 @@ kgr_maps_beta_anom |>
 ```
 &#10;Agregação de betas e anomalias (médias nos municípios)
 &#10;
-```r
+``` r
 city_kgr_beta_anom <- left_join(
   citys |> filter(abbrev_state == "SP"),
   kgr_maps_beta_anom |>
@@ -707,7 +707,7 @@ city_kgr_beta_anom <- left_join(
 ```
 &#10;Beta municipal
 &#10;
-```r
+``` r
 city_kgr_beta_anom |>
   drop_na() |> 
      ggplot() +
@@ -730,7 +730,7 @@ city_kgr_beta_anom |>
 ```
 &#10;Mapa da Anomalia média
 &#10;
-```r
+``` r
 kgr_maps_beta_anom |>
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = anomaly_xco2)) +
@@ -744,7 +744,7 @@ kgr_maps_beta_anom |>
 &#10;
 ### Mapa da Anomalia média até 2018
 &#10;
-```r
+``` r
 kgr_maps_nested_period <- kgr_maps |> 
   mutate(
     year = as.numeric(str_sub(season_year,1,2))+2000,
@@ -761,7 +761,7 @@ kgr_maps_nested_period <- kgr_maps |>
   ungroup()
 &#10;```
 &#10;
-```r
+``` r
 kgr_maps_beta_anom_period <- kgr_maps_nested_period |>
   mutate(
     beta_xco2 = map(data,get_my_par,par_return="beta"),
@@ -776,7 +776,7 @@ kgr_maps_beta_anom_period <- kgr_maps_nested_period |>
   )
 ```
 &#10;
-&#10;```r
+&#10;``` r
 kgr_maps_beta_anom_period |>
   filter(period == "before-2018") |> 
   ggplot(aes(x=X, y=Y)) +
@@ -791,7 +791,7 @@ kgr_maps_beta_anom_period |>
 ```
 &#10;### Mapa da Anomalia média após 2018
 &#10;
-```r
+``` r
 kgr_maps_beta_anom_period |>
   filter(period == "after-2018") |> 
   ggplot(aes(x=X, y=Y)) +
@@ -806,7 +806,7 @@ kgr_maps_beta_anom_period |>
 ```
 &#10;### Mapa do Beta até 2018
 &#10;
-```r
+``` r
 kgr_maps_beta_anom_period |>
   filter(period == "before-2018") |> 
   ggplot(aes(x=X, y=Y)) +
@@ -821,7 +821,7 @@ kgr_maps_beta_anom_period |>
 ```
 &#10;### Mapa do Beta após 2018
 &#10;
-```r
+``` r
 kgr_maps_beta_anom_period |>
   filter(period == "after-2018") |> 
   ggplot(aes(x=X, y=Y)) +
@@ -836,7 +836,7 @@ kgr_maps_beta_anom_period |>
 ```
 &#10;Anomalia média municipal
 &#10;
-```r
+``` r
 hotspots <- city_kgr_beta_anom |>
   slice_max(anomaly_xco2, n = 5, with_ties = FALSE) |>
   mutate(tipo = "hotspot")
@@ -874,7 +874,7 @@ pontos_destaque <- bind_rows(hotspots, coldspots)
 ```
 &#10;Anomalia para cada estação no período todo (TOP 10 )
 &#10;
-```r
+``` r
 map(season,~{
   hotspots <- left_join(
   citys |> filter(abbrev_state == "SP"),
@@ -939,7 +939,7 @@ map(season,~{
 &#10;### 4) Análise de reconhecimento de padrões 
 &#10;#### Por season (Dry vs Rainy)
 &#10;
-```r
+``` r
 nome_periodo <- c("Dry","Rainy")
 vetor_de_grupos<-c(2,4)
 for(i in 1:2){
@@ -1001,7 +1001,7 @@ for(i in 1:2){
 &#10;
 #### Por Média anual anomalia
 &#10;
-```r
+``` r
 kgr_maps_wider <- kgr_maps |> 
   select(season_year, X,Y,city,xco2_anomaly) |> 
   mutate(season = str_sub(season_year,1,5)) |> 
@@ -1054,7 +1054,7 @@ grupo<-cutree(da_pad_euc_ward,4)
 &#10;
 #### Por período (até e após 2018)
 &#10;
-```r
+``` r
 nome_periodo <- c("before-2018","after-2018")
 vetor_de_grupos<-c(2,2)
 for(i in seq_along(nome_periodo)){
@@ -1117,13 +1117,13 @@ for(i in seq_along(nome_periodo)){
 &#10;
 &#10;### 6) Uso da terra
 &#10;
-```r
+``` r
 land_use_change <- read_rds("data/grid-kgr_luc.rds") 
 glimpse(land_use_change)
 ```
 &#10;
 &#10;
-```r
+``` r
 kgr_maps_cover <- kgr_maps |> ungroup() |> 
   mutate(
     year = str_sub(season_year,1,2) |> as.numeric() +2000,
@@ -1165,7 +1165,7 @@ kgr_maps_cover <- kgr_maps |> ungroup() |>
 ```
 ### Estatísticas descritivas por classe de uso do solo
 &#10;
-```r
+``` r
 kgr_maps_cover |>
   mutate(cover = descricao) |>
   group_by(year, cover) |> 
@@ -1187,7 +1187,7 @@ kgr_maps_cover |>
   )
 ```
 &#10;Retirando os top 7 usos do solo no estado.
-&#10;```r
+&#10;``` r
 my_top_7_cover <- kgr_maps_cover |>
   mutate(cover = descricao) |>
   group_by(year, cover) |> 
@@ -1203,7 +1203,7 @@ my_top_7_cover <- kgr_maps_cover |>
 ```
 &#10;Estatística descritiva de xCO2 para cada classe uso por season
 &#10;
-```r
+``` r
 kgr_maps_cover |> 
   mutate(
     cover_top_7 = ifelse(descricao %in% my_top_7_cover,
@@ -1221,7 +1221,7 @@ kgr_maps_cover |>
   theme_ridges()
 ```
 &#10;
-```r
+``` r
 kgr_maps_cover |>
    mutate(
     cover_top_7 = ifelse(descricao %in% my_top_7_cover,
@@ -1242,7 +1242,7 @@ kgr_maps_cover |>
   writexl::write_xlsx("output/estat-desc-year-season-cover.xlsx")
 ```
 &#10;
-```r
+``` r
 kgr_maps_cover |>
    mutate(
     cover_top_7 = ifelse(descricao %in% my_top_7_cover,
@@ -1262,7 +1262,7 @@ kgr_maps_cover |>
   scale_fill_viridis_d(option = "A")
 ```
 &#10;
-```r
+``` r
 kgr_maps_cover |>
    mutate(
     cover_top_7 = ifelse(descricao %in% my_top_7_cover,
@@ -1285,7 +1285,7 @@ kgr_maps_cover |>
 ### Análise de variância (ANOVA ou Kruskal-Wallis)
 &#10;Comparação de XCO₂ entre diferentes classes de uso do solo.
 &#10;
-```r
+``` r
 anova_group <- function(df){
   mod <- aov(xco2 ~ cover_top_7,
       data = df |> 
@@ -1366,7 +1366,7 @@ for (i in 2015:2023) {
   }
 }
 &#10;```
-&#10;```r
+&#10;``` r
 kgr_maps_beta_cover_group <- kgr_maps_beta_anom |> 
   left_join(
     kgr_maps_cover |> 
@@ -1383,7 +1383,7 @@ kgr_maps_beta_cover_group <- kgr_maps_beta_anom |>
   select(-xco2, -xco2_std, -year, -season_year, -season)
 ```
 &#10;
-```r
+``` r
 kgr_maps_beta_cover_group |> 
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = cover)) +
@@ -1406,7 +1406,7 @@ kgr_maps_beta_cover_group |>
 &#10;
 O arquivo `kgr_maps_beta_cover_group` associa todos os resultados até aqui gerados, Betas, krigagem, usos do solo.
 &#10;
-&#10;```r
+&#10;``` r
 kgr_maps_beta_cover_group |> 
   mutate(
     descricao = ifelse(descricao %in% my_top_7_cover,
@@ -1424,7 +1424,7 @@ kgr_maps_beta_cover_group |>
     KRT = agricolae::kurtosis(beta_xco2),
   )
 &#10;```
-&#10;```r
+&#10;``` r
 kgr_maps_beta_cover_group |> 
   mutate(
     descricao = ifelse(descricao %in% my_top_7_cover,
@@ -1445,7 +1445,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 &#10;
-&#10;```r
+&#10;``` r
 kgr_maps_beta_cover_group |> 
   mutate(
     descricao = ifelse(descricao %in% my_top_7_cover,
@@ -1457,7 +1457,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 &#10;
-```r
+``` r
 kgr_maps_beta_cover_group |> 
   mutate(
     descricao = ifelse(descricao %in% my_top_7_cover,
@@ -1473,7 +1473,7 @@ kgr_maps_beta_cover_group |>
   theme_ridges()
 ```
 &#10;
-```r
+``` r
 # primeiro analisa xCO2
 # depois, analisa beta xCO2 período
 # beta xCO2 período poderia ser maior ou menor com a MUDANÇA no uso da terra
@@ -1483,4 +1483,4 @@ kgr_maps_beta_cover_group |>
 # do que pro interior
 ```
 &#10;### Morans Indices I
-&#10;--->
+&#10;-->

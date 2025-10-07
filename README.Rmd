@@ -10,7 +10,7 @@ knitr::opts_chunk$set(
   warning = FALSE,
   error = FALSE,
   message = FALSE,
-  eval = FALSE,
+  # eval = FALSE,
   comment = "#>"
 )
 ```
@@ -57,7 +57,7 @@ Corrigindo o polígono do Estado de São Paulo.
 # # plot(pol_sp)
 ```
 
-Classificando os pontos pertencentes ao estado de São Paulo e gerando um arqui para o estado.
+Classificando os pontos pertencentes ao estado de São Paulo e gerando um arquivo para o estado.
 
 ```{r}
 # data_set_sp <- data_set |>
@@ -514,7 +514,7 @@ df <- ko_variavel |>
   mutate(var1.var = sqrt(var1.var))
 write_rds(df,paste0("output/maps-kgr/kgr-anom_xco2-",str_replace(my_season,"\\:","_"),".rds"))
 ```
-<!---
+<!--
 #### Compilação de todos os mapas gerados
 
 ```{r}
@@ -1569,4 +1569,4 @@ kgr_maps_beta_cover_group |>
 
 ### Morans Indices I
 
---->
+-->
