@@ -341,9 +341,9 @@ grid_geral <- read_rds("data/grid-city.rds")
 #### Definição do gradeado adensado.
 
 ```{r}
-grid <- grid_geral |> 
-  select(X, Y)
-sp::gridded(grid) = ~ X + Y
+# grid <- grid_geral |> 
+#   select(X, Y)
+# sp::gridded(grid) = ~ X + Y
 ```
 
 
@@ -357,72 +357,72 @@ sp::gridded(grid) = ~ X + Y
 
 
 ```{r}
-my_season = "dry_15:16"
-data_set_aux  <- data_set_sp |>
-  filter(
-    season_year == my_season) |>
-  select(longitude, latitude, xco2_anomaly)
-
-vct_xco2 <- vector();dist_xco2 <- vector();
-lon_grid <- vector();lat_grid <- vector();
-for(i in 1:nrow(data_set_aux)){
-  d <- sqrt((data_set_aux$longitude[i] - grid$X)^2 +
-              (data_set_aux$latitude[i] - grid$Y)^2)
-  min_index <- order(d)[1]
-  vct_xco2[i] <- data_set_aux$xco2_anomaly[min_index]
-  dist_xco2[i] <- d[order(d)[1]]
-  lon_grid[i] <- grid$X[min_index]
-  lat_grid[i] <- grid$Y[min_index]
-}
-data_set_aux$dist_xco2 <- dist_xco2
-data_set_aux$xco2_new <- vct_xco2
-data_set_aux$lon_grid <- lon_grid
-data_set_aux$lat_grid <- lat_grid
-data_set_aux |>
-  group_by(lon_grid,lat_grid) |>
-  summarise(
-    xco2_anomaly = mean(xco2_anomaly),
-    .groups = "drop"
-  ) |>
-  rename(longitude = lon_grid, latitude = lat_grid) -> data_set_aux
-sp::coordinates(data_set_aux) = ~ longitude + latitude
+# my_season = "rainy_23:24"
+# data_set_aux  <- data_set_sp |>
+#   filter(
+#     season_year == my_season) |>
+#   select(longitude, latitude, xco2_anomaly)
+# 
+# vct_xco2 <- vector();dist_xco2 <- vector();
+# lon_grid <- vector();lat_grid <- vector();
+# for(i in 1:nrow(data_set_aux)){
+#   d <- sqrt((data_set_aux$longitude[i] - grid$X)^2 +
+#               (data_set_aux$latitude[i] - grid$Y)^2)
+#   min_index <- order(d)[1]
+#   vct_xco2[i] <- data_set_aux$xco2_anomaly[min_index]
+#   dist_xco2[i] <- d[order(d)[1]]
+#   lon_grid[i] <- grid$X[min_index]
+#   lat_grid[i] <- grid$Y[min_index]
+# }
+# data_set_aux$dist_xco2 <- dist_xco2
+# data_set_aux$xco2_new <- vct_xco2
+# data_set_aux$lon_grid <- lon_grid
+# data_set_aux$lat_grid <- lat_grid
+# data_set_aux |>
+#   group_by(lon_grid,lat_grid) |>
+#   summarise(
+#     xco2_anomaly = mean(xco2_anomaly),
+#     .groups = "drop"
+#   ) |>
+#   rename(longitude = lon_grid, latitude = lat_grid) -> data_set_aux
+# sp::coordinates(data_set_aux) = ~ longitude + latitude
 ```
 
 #### PASSO 2 - Construção do Semivariograma Experimental
 
 ```{r}
-form <- xco2_anomaly ~ 1
-vari_exp <- gstat::variogram(form, data = data_set_aux,
-                      cressie = FALSE,
-                      cutoff = 1, # distância máxima 8
-                      width = 0.05) # distancia entre pontos
-vari_exp  |>
-  ggplot(aes(x=dist, y=gamma)) +
-  geom_point() +
-  labs(x="lag (º)",
-       y=expression(paste(gamma,"(h)")))
+# form <- xco2_anomaly ~ 1
+# vari_exp <- gstat::variogram(form, data = data_set_aux,
+#                       cressie = FALSE,
+#                       cutoff = 2, # distância máxima 8
+#                       width = 0.05) # distancia entre pontos
+# vari_exp  |>
+#   ggplot(aes(x=dist, y=gamma)) +
+#   geom_point() +
+#   labs(x="lag (º)",
+#        y=expression(paste(gamma,"(h)")))
 ```
 
 #### PASSO 3) Ajuste dos modelos matemáticos teóricos ao semivariograma experimental
 
 ```{r}
-patamar=0.6
-alcance=0.4
-epepita=0.2
-modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
-modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
-modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
-plot_my_models(modelo_1,modelo_2,modelo_3)
+# patamar=1.27
+# alcance=0.34
+# epepita=0.4
+# modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+# modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+# modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
+# plot_my_models(modelo_1,modelo_2,modelo_3)
 ```
 #### PASSO 4) Escolha do melhor modelo
 
 O melhor modelo é aquele que apresenta um coeficiente de regressão o mais próximo de 01 e o interesepto o mais próximo de 0.
 
 ```{r}
-conjunto_validacao <- data_set_aux |>
-  as_tibble() |>
-  sample_n(50)
-sp::coordinates(conjunto_validacao) = ~longitude + latitude
+# conjunto_validacao <- data_set_aux |>
+#   as_tibble() |>
+#   sample_n(200)
+# sp::coordinates(conjunto_validacao) = ~longitude + latitude
 # modelos<-list(modelo_1,modelo_2,modelo_3)
 # for(j in 1:3){
 #   est<-0
@@ -447,74 +447,78 @@ sp::coordinates(conjunto_validacao) = ~longitude + latitude
 #### PASSO 5) Definido o melhor modelo, precisamos guardar os valores.
 
 ```{r}
-modelo <- modelo_1 ## sempre modificar
-# Salvando os parâmetros dos melhores modelo
-model <- modelo |> slice(2) |> pull(model)
-rss <- round(attr(modelo, "SSErr"),4)
-c0 <- round(modelo$psill[[1]],4)
-c0_c1 <- round(sum(modelo$psill),4)
-a <- ifelse(model == "Gau", round(modelo$range[[2]]*(3^.5),2),
-            ifelse(model == "Exp",round(3*modelo$range[[2]],2),
-            round(modelo$range[[2]],2)))
-
-
-r2 <- vari_exp |> add_column( model = model, a=a, c0 = c0,
-                                  c0_c1 = c0_c1) |>
-    mutate(
-      gamma_m = ifelse(model == "Sph",
-        ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-(dist/a)^2)))),
-      residuo_total = (gamma-mean(gamma))^2,
-      residuo_mod = (gamma - gamma_m)^2
-    ) |>
-    summarise(
-      r2=(sum(residuo_total) - sum(residuo_mod))/sum(residuo_total)
-    ) |> pull(r2)
-
-tibble(
-  my_season, model, c0, c0_c1, a, rss, r2
-) |> mutate(gde = c0/c0_c1, .after = "a") |>
-  rename(season=my_season) |>
-  write_csv(paste0("output/best-fit-anom/",str_replace(my_season,"\\:","_"),".csv"))
-
-ls_csv <- list.files("output/best-fit-anom/",full.names = TRUE,pattern = ".csv")
-map_df(ls_csv, read_csv) |>
-  writexl::write_xlsx("output/semivariogram-models-anom.xlsx")
-png(filename = paste0("output/semivariogram-img/semivar-anom",
-                      str_replace(my_season,"\\:","_"),".png"),
-    width = 800, height = 600)
-plot(vari_exp,model=modelo,cex.lab=2, col=1,pl=F,pch=16,cex=2.2,ylab=list("Semivariância",cex=2.3),xlab=list("Distância de Separação h (m)",cex=2.3,cex.axis=4))
-dev.off()
+# modelo <- modelo_2 ## sempre modificar
+# # Salvando os parâmetros dos melhores modelo
+# model <- modelo |> slice(2) |> pull(model)
+# rss <- round(attr(modelo, "SSErr"),4)
+# c0 <- round(modelo$psill[[1]],4)
+# c0_c1 <- round(sum(modelo$psill),4)
+# a <- ifelse(model == "Gau", round(modelo$range[[2]]*(3^.5),2),
+#             ifelse(model == "Exp",round(3*modelo$range[[2]],2),
+#             round(modelo$range[[2]],2)))
+# 
+# 
+# r2 <- vari_exp |> add_column( model = model, a=a, c0 = c0,
+#                                   c0_c1 = c0_c1) |>
+#     mutate(
+#       gamma_m = ifelse(model == "Sph",
+#         ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-(dist/a)^2)))),
+#       residuo_total = (gamma-mean(gamma))^2,
+#       residuo_mod = (gamma - gamma_m)^2
+#     ) |>
+#     summarise(
+#       r2=(sum(residuo_total) - sum(residuo_mod))/sum(residuo_total)
+#     ) |> pull(r2)
+# 
+# tibble(
+#   my_season, model, c0, c0_c1, a, rss, r2
+# ) |> mutate(gde = c0/c0_c1, .after = "a") |>
+#   rename(season=my_season) |>
+#   write_csv(paste0("output/best-fit-anom/",str_replace(my_season,"\\:","_"),".csv"))
+# 
+# ls_csv <- list.files("output/best-fit-anom/",full.names = TRUE,pattern = ".csv")
+# map_df(ls_csv, read_csv) |>
+#   writexl::write_xlsx("output/semivariogram-models-anom.xlsx")
+# png(filename = paste0("output/semivariogram-img/semivar-anom",
+#                       str_replace(my_season,"\\:","_"),".png"),
+#     width = 800, height = 600)
+# plot(vari_exp,model=modelo,cex.lab=2, col=1,pl=F,pch=16,cex=2.2,ylab=list("Semivariância",cex=2.3),xlab=list("Distância de Separação h (m)",cex=2.3,cex.axis=4))
+# dev.off()
 ```
 
 #### Passo 6 - Krigagem Ordinária - interpolação em locais não amostrados
 ```{r}
-ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
-                     block=c(0.1,0.1),
-                     nsim=0,
-                     na.action=na.pass,
-                     debug.level=-1
-)
+# ko_variavel <- krige(formula=form, data_set_aux, grid, model=modelo,
+#                      block=c(0.1,0.1),
+#                      nsim=0,
+#                      na.action=na.pass,
+#                      debug.level=-1
+# )
 ```
 #### Passo 7 - Visualização dos padrões espaciais e armazenamento dos dados e imagem.
 
 ```{r}
-mapa <- as_tibble(ko_variavel) |>
-  ggplot(aes(x=X, y=Y)) +
-  geom_tile(aes(fill = var1.pred)) +
-  scale_fill_viridis_c(option = "inferno") +
-  coord_equal() +
-  labs(x="Longitude",
-       y="Latitude",
-       fill="xco2_anomaly") +
-  theme_bw()
-mapa
-ggsave(paste0("output/maps-kgr/kgr-anom_xco2-",str_replace(my_season,"\\:","_"),".png"), plot = mapa, width = 10, height = 8, dpi = 300)
-df <- ko_variavel |>
-  as_tibble() |>
-  mutate(var1.var = sqrt(var1.var))
-write_rds(df,paste0("output/maps-kgr/kgr-anom_xco2-",str_replace(my_season,"\\:","_"),".rds"))
+# mapa <- as_tibble(ko_variavel) |>
+#   ggplot(aes(x=X, y=Y)) +
+#   geom_tile(aes(fill = var1.pred)) +
+#   scale_fill_viridis_c(option = "inferno") +
+#   coord_equal() +
+#   labs(x="Longitude",
+#        y="Latitude",
+#        fill="xco2_anomaly") +
+#   theme_bw()
+# mapa
+# ggsave(paste0("output/maps-kgr/kgr-anom_xco2-",str_replace(my_season,"\\:","_"),".png"), plot = mapa, width = 10, height = 8, dpi = 300)
+# df <- ko_variavel |>
+#   as_tibble() |>
+#   mutate(var1.var = sqrt(var1.var))
+# write_rds(df,paste0("output/maps-kgr/kgr-anom_xco2-",str_replace(my_season,"\\:","_"),".rds"))
 ```
+<<<<<<< HEAD
 <!--
+=======
+
+>>>>>>> 18561c3908fcfee08200985efae5360d2a4492da
 #### Compilação de todos os mapas gerados
 
 ```{r}
@@ -1569,4 +1573,8 @@ kgr_maps_beta_cover_group |>
 
 ### Morans Indices I
 
+<<<<<<< HEAD
 -->
+=======
+
+>>>>>>> 18561c3908fcfee08200985efae5360d2a4492da
