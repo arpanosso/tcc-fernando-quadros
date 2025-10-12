@@ -38,13 +38,14 @@ Carregando a base geral
 Corrigindo o polígono do Estado de São Paulo.
 
 ``` r
-# pol_sp <- states |> filter(abbrev_state == "SP") |> 
-#   pull(geom) |> 
-#   pluck(1) |> 
-#   as.matrix()
-# pol_sp <- pol_sp[(183:4742),]
-# pol_sp <- rbind(pol_sp, pol_sp[1,])
-# # plot(pol_sp)
+states <- geobr::read_state(showProgress = FALSE)
+pol_sp <- states |> filter(abbrev_state == "SP") |>
+  pull(geom) |>
+  pluck(1) |>
+  as.matrix()
+pol_sp <- pol_sp[(183:4742),]
+pol_sp <- rbind(pol_sp, pol_sp[1,])
+# plot(pol_sp)
 ```
 
 Classificando os pontos pertencentes ao estado de São Paulo e gerando um
@@ -267,7 +268,7 @@ estado de SP.
 
 ``` r
 # vetores para coordenadas x e y selecionadas da base do IBGE1
-# pol_sp <- states |> 
+# pol_sp <- states |>
 #   filter(abbrev_state == "SP") |> pull(geom) |> purrr::pluck(1) |> as.matrix()
 # x<-pol_sp[,1]
 # y<-pol_sp[,2]
@@ -1131,7 +1132,7 @@ kgr_maps_beta_anom_period <- kgr_maps_beta_anom_period |>
 
 ``` r
 kgr_maps_beta_anom_period |>
-  filter(period == "before-2018") |> 
+  filter(period == "before-2018") |>
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = anomaly_xco2)) +
   scale_fill_viridis_c(option = "inferno") +
@@ -1149,7 +1150,7 @@ kgr_maps_beta_anom_period |>
 
 ``` r
 kgr_maps_beta_anom_period |>
-  filter(period == "after-2018") |> 
+  filter(period == "after-2018") |>
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = anomaly_xco2)) +
   scale_fill_viridis_c(option = "inferno") +
@@ -1167,7 +1168,7 @@ kgr_maps_beta_anom_period |>
 
 ``` r
 kgr_maps_beta_anom_period |>
-  filter(period == "before-2018") |> 
+  filter(period == "before-2018") |>
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = beta_xco2)) +
   scale_fill_viridis_c() +
@@ -1185,7 +1186,7 @@ kgr_maps_beta_anom_period |>
 
 ``` r
 kgr_maps_beta_anom_period |>
-  filter(period == "after-2018") |> 
+  filter(period == "after-2018") |>
   ggplot(aes(x=X, y=Y)) +
   geom_tile(aes(fill = beta_xco2)) +
   scale_fill_viridis_c() +
@@ -1406,69 +1407,67 @@ map(season,~{
 #### Por season (Dry vs Rainy)
 
 ``` r
-nome_periodo <- c("Dry","Rainy")
-vetor_de_grupos<-c(2,2)
-for(i in 1:2){
-  kgr_maps_wider <- kgr_maps |> 
-    mutate(
-      season = str_sub(season_year,1,5),
-      period = as.numeric(str_sub(season_year,7,7))
-    ) |>
-    filter(period == i) |> 
-    select(season, X,Y,city,anom_xco2) |> 
-    group_by(season, city) |> 
-    summarise(anom_xco2 = mean(anom_xco2, na.rm = TRUE)) |> 
-    pivot_wider(names_from = season,
-                values_from = anom_xco2,names_prefix = "season_")
-  name_muni <- kgr_maps_wider |> pull(city)
-  kgr_maps_wider_xco2 <- kgr_maps_wider |> 
-    select(season_15_16:season_23_24) #|> 
-  # select(ends_with("2"))
-  
-  mc <- cor(kgr_maps_wider_xco2)
-  corrplot::corrplot(mc)
-  da_pad<-decostand(kgr_maps_wider_xco2, 
-                    method = "standardize",
-                    na.rm=TRUE)
-  da_pad_euc<-vegdist(da_pad,"euclidean") 
-  da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
-  plot(da_pad_euc_ward, 
-       ylab="Distância Euclidiana",
-       xlab="Acessos", hang=-1,
-       col="blue", las=1,
-       cex=.6,lwd=1.5);box()
-  grupo<-cutree(da_pad_euc_ward,vetor_de_grupos[i])
-  
-  city_kgr_beta_group <- city_kgr_beta_anom |> 
-    left_join(
-      tibble(name_muni, grupo),
-      by="name_muni")
-  
-  plot_cidades_agrupamento <- city_kgr_beta_group  |>
-    drop_na() |> 
-    ggplot() +
-    geom_sf(aes(fill=grupo), color="transparent",
-            size=.05, show.legend = TRUE)  +
-    geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(size = rel(.9), color = "black"),
-      axis.title.x = element_text(size = rel(1.1), color = "black"),
-      axis.text.y = element_text(size = rel(.9), color = "black"),
-      axis.title.y = element_text(size = rel(1.1), color = "black"),
-      legend.text = element_text(size = rel(1), color = "black"),
-      legend.title = element_text(face = 'bold', size = rel(1.2))
-    ) +
-    labs(fill = 'Agrupamento',
-         x = 'Longitude',
-         y = 'Latitude',
-         title = nome_periodo[i]) +
-    scale_fill_viridis_c()
-  print(plot_cidades_agrupamento)
-}
+# nome_periodo <- c("Dry","Rainy")
+# vetor_de_grupos<-c(2,2)
+# for(i in 1:2){
+#   kgr_maps_wider <- kgr_maps |> 
+#     mutate(
+#       season = str_sub(season_year,1,5),
+#       period = as.numeric(str_sub(season_year,7,7))
+#     ) |>
+#     filter(period == i) |> 
+#     select(season, X,Y,city,anom_xco2) |> 
+#     group_by(season, city) |> 
+#     summarise(anom_xco2 = mean(anom_xco2, na.rm = TRUE)) |> 
+#     pivot_wider(names_from = season,
+#                 values_from = anom_xco2,names_prefix = "season_")
+#   name_muni <- kgr_maps_wider |> pull(city)
+#   kgr_maps_wider_xco2 <- kgr_maps_wider |> 
+#     select(season_15_16:season_23_24) #|> 
+#   # select(ends_with("2"))
+#   
+#   mc <- cor(kgr_maps_wider_xco2)
+#   corrplot::corrplot(mc)
+#   da_pad<-decostand(kgr_maps_wider_xco2, 
+#                     method = "standardize",
+#                     na.rm=TRUE)
+#   da_pad_euc<-vegdist(da_pad,"euclidean") 
+#   da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+#   plot(da_pad_euc_ward, 
+#        ylab="Distância Euclidiana",
+#        xlab="Acessos", hang=-1,
+#        col="blue", las=1,
+#        cex=.6,lwd=1.5);box()
+#   grupo<-cutree(da_pad_euc_ward,vetor_de_grupos[i])
+#   
+#   city_kgr_beta_group <- city_kgr_beta_anom |> 
+#     left_join(
+#       tibble(name_muni, grupo),
+#       by="name_muni")
+#   
+#   plot_cidades_agrupamento <- city_kgr_beta_group  |>
+#     drop_na() |> 
+#     ggplot() +
+#     geom_sf(aes(fill=grupo), color="transparent",
+#             size=.05, show.legend = TRUE)  +
+#     geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
+#     theme_bw() +
+#     theme(
+#       axis.text.x = element_text(size = rel(.9), color = "black"),
+#       axis.title.x = element_text(size = rel(1.1), color = "black"),
+#       axis.text.y = element_text(size = rel(.9), color = "black"),
+#       axis.title.y = element_text(size = rel(1.1), color = "black"),
+#       legend.text = element_text(size = rel(1), color = "black"),
+#       legend.title = element_text(face = 'bold', size = rel(1.2))
+#     ) +
+#     labs(fill = 'Agrupamento',
+#          x = 'Longitude',
+#          y = 'Latitude',
+#          title = nome_periodo[i]) +
+#     scale_fill_viridis_c()
+#   print(plot_cidades_agrupamento)
+# }
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-48-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-48-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-48-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-48-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-48-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-48-6.png)<!-- -->
 
 #### Por Média anual anomalia
 
@@ -1539,74 +1538,73 @@ city_kgr_beta_group  |>
 
 ![](README_files/figure-gfm/unnamed-chunk-49-3.png)<!-- -->
 
-<!--
 #### Por período (até e após 2018)
-&#10;
+
 ``` r
-nome_periodo <- c("before-2018","after-2018")
-vetor_de_grupos<-c(2,2)
-for(i in seq_along(nome_periodo)){
-  &#10;  kgr_maps_wider <- kgr_maps |> 
-    mutate(
-      year = as.numeric(str_sub(season_year,1,2))+2000,
-      period = ifelse(year<=2018,"before-2018","after-2018")) |> 
-    group_by(period,season_year,X,Y) |>
-    filter(period == nome_periodo[i]) |> 
-    select(period, season_year, X,Y,city,anom_xco2) |> 
-    group_by(season_year, period, city) |> 
-    summarise(anom_xco2 = mean(anom_xco2, na.rm = TRUE),
-              .groups = "drop") |> 
-    pivot_wider(names_from = season_year,
-                values_from = anom_xco2,names_prefix = "season_")
-  &#10;  name_muni <- kgr_maps_wider |> pull(city)
-  kgr_maps_wider_xco2 <- kgr_maps_wider |> 
-    select(-c(period, city)) #|> 
-  # select(ends_with("2"))
-  &#10;  mc <- cor(kgr_maps_wider_xco2)
-  corrplot::corrplot(mc)
-  da_pad<-decostand(kgr_maps_wider_xco2, 
-                    method = "standardize",
-                    na.rm=TRUE)
-  da_pad_euc<-vegdist(da_pad,"euclidean") 
-  da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
-  plot(da_pad_euc_ward, 
-       ylab="Distância Euclidiana",
-       xlab="Acessos", hang=-1,
-       col="blue", las=1,
-       cex=.6,lwd=1.5);box()
-  grupo<-cutree(da_pad_euc_ward,vetor_de_grupos[i])
-  &#10;  city_kgr_beta_group <- city_kgr_beta_anom |> 
-    left_join(
-      tibble(name_muni, grupo),
-      by="name_muni")
-  &#10;  plot_cidades_agrupamento <- city_kgr_beta_group  |>
-    drop_na() |> 
-    ggplot() +
-    geom_sf(aes(fill=grupo), color="transparent",
-            size=.05, show.legend = TRUE)  +
-    geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(size = rel(.9), color = "black"),
-      axis.title.x = element_text(size = rel(1.1), color = "black"),
-      axis.text.y = element_text(size = rel(.9), color = "black"),
-      axis.title.y = element_text(size = rel(1.1), color = "black"),
-      legend.text = element_text(size = rel(1), color = "black"),
-      legend.title = element_text(face = 'bold', size = rel(1.2))
-    ) +
-    labs(fill = 'Agrupamento',
-         x = 'Longitude',
-         y = 'Latitude',
-         title = nome_periodo[i]) +
-    scale_fill_viridis_c()
-  print(plot_cidades_agrupamento)
-}
+# nome_periodo <- c("before-2018","after-2018")
+# vetor_de_grupos<-c(2,2)
+# for(i in seq_along(nome_periodo)){
+#   
+#   kgr_maps_wider <- kgr_maps |> 
+#     mutate(
+#       year = as.numeric(str_sub(season_year,1,2))+2000,
+#       period = ifelse(year<=2018,"before-2018","after-2018")) |> 
+#     group_by(period,season_year,X,Y) |>
+#     filter(period == nome_periodo[i]) |> 
+#     select(period, season_year, X,Y,city,anom_xco2) |> 
+#     group_by(season_year, period, city) |> 
+#     summarise(anom_xco2 = mean(anom_xco2, na.rm = TRUE),
+#               .groups = "drop") |> 
+#     pivot_wider(names_from = season_year,
+#                 values_from = anom_xco2,names_prefix = "season_")
+#   
+#   name_muni <- kgr_maps_wider |> pull(city)
+#   kgr_maps_wider_xco2 <- kgr_maps_wider |> 
+#     select(-c(period, city)) #|> 
+#   # select(ends_with("2"))
+#   
+#   mc <- cor(kgr_maps_wider_xco2)
+#   corrplot::corrplot(mc)
+#   da_pad<-decostand(kgr_maps_wider_xco2, 
+#                     method = "standardize",
+#                     na.rm=TRUE)
+#   da_pad_euc<-vegdist(da_pad,"euclidean") 
+#   da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+#   plot(da_pad_euc_ward, 
+#        ylab="Distância Euclidiana",
+#        xlab="Acessos", hang=-1,
+#        col="blue", las=1,
+#        cex=.6,lwd=1.5);box()
+#   grupo<-cutree(da_pad_euc_ward,vetor_de_grupos[i])
+#   
+#   city_kgr_beta_group <- city_kgr_beta_anom |> 
+#     left_join(
+#       tibble(name_muni, grupo),
+#       by="name_muni")
+#   
+#   plot_cidades_agrupamento <- city_kgr_beta_group  |>
+#     drop_na() |> 
+#     ggplot() +
+#     geom_sf(aes(fill=grupo), color="transparent",
+#             size=.05, show.legend = TRUE)  +
+#     geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
+#     theme_bw() +
+#     theme(
+#       axis.text.x = element_text(size = rel(.9), color = "black"),
+#       axis.title.x = element_text(size = rel(1.1), color = "black"),
+#       axis.text.y = element_text(size = rel(.9), color = "black"),
+#       axis.title.y = element_text(size = rel(1.1), color = "black"),
+#       legend.text = element_text(size = rel(1), color = "black"),
+#       legend.title = element_text(face = 'bold', size = rel(1.2))
+#     ) +
+#     labs(fill = 'Agrupamento',
+#          x = 'Longitude',
+#          y = 'Latitude',
+#          title = nome_periodo[i]) +
+#     scale_fill_viridis_c()
+#   print(plot_cidades_agrupamento)
+# }
 ```
-&#10;![](README_files/figure-gfm/unnamed-chunk-50-1.png)<!-- -->
-
-![](README_files/figure-gfm/unnamed-chunk-50-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-50-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-50-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-50-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-50-6.png)<!-- -->
-
-–\>
 
 ### 6) Uso da terra
 
@@ -1959,8 +1957,8 @@ kgr_maps_beta_cover_group |>
 #> # A tibble: 2 × 9
 #>   grupo     N    MIN   MEAN MEDIAN   MAX STD_DV     SKW   KRT
 #>   <int> <int>  <dbl>  <dbl>  <dbl> <dbl>  <dbl>   <dbl> <dbl>
-#> 1     1  5004 -0.159 0.0841 0.0856 0.270 0.0600 -0.413  0.803
-#> 2     2  3686 -0.133 0.0908 0.0891 0.295 0.0562  0.0671 0.864
+#> 1     1  3441 -0.159 0.0608 0.0643 0.237 0.0557 -0.530  1.17 
+#> 2     2  5249 -0.123 0.104  0.103  0.295 0.0538 -0.0139 0.493
 ```
 
 ``` r

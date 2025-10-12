@@ -32,12 +32,12 @@ citys <- geobr::read_municipality(showProgress = FALSE)
 #
 #
 # ## Classificação de pertencimento de ponto em polígono
-# def_pol <- function(x, y, pol){
-#   as.logical(sp::point.in.polygon(point.x = x,
-#                                   point.y = y,
-#                                   pol.x = pol[,1],
-#                                   pol.y = pol[,2]))
-# }
+def_pol <- function(x, y, pol){
+  as.logical(sp::point.in.polygon(point.x = x,
+                                  point.y = y,
+                                  pol.x = pol[,1],
+                                  pol.y = pol[,2]))
+}
 #
 # ### Função para buscar se um ponto pertentece a lista de polígonos
 # get_geobr_state <- function(x,y){
