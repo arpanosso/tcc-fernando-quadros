@@ -567,6 +567,29 @@ kgr_maps <- kgr_maps |>
   )
 ```
 
+``` r
+kgr_maps |> 
+  select(X:xco2,-anom_xco2) |> 
+  mutate(
+    season_year = paste0("epoch-",str_remove(season_year,"_\\d+"))
+  ) |> 
+  arrange(season_year) |> 
+  pivot_wider(names_from = season_year, values_from = xco2) |> 
+  select(-X,-Y) |> 
+  cor() |> 
+  corrplot::corrplot(method = "color",
+         outline = T,,
+         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+         diag = FALSE,
+         # addCoef.col = "black",
+         cl.ratio = 0.2,
+         cl.length = 5,
+         number.cex = 0.8) 
+```
+
+![](README_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+
 #### Centroide de massa, cold and hotspots
 
 ``` r
@@ -735,7 +758,7 @@ kgr_maps_beta_anom |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
 
 ### Mapa da Anomalia média até 2018
 
@@ -1033,7 +1056,7 @@ mc <- cor(kgr_maps_wider_xco2_anomaly)
 corrplot::corrplot(mc)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-47-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-48-1.png)<!-- -->
 
 ``` r
 da_pad<-decostand(kgr_maps_wider_xco2_anomaly, 
@@ -1048,7 +1071,7 @@ plot(da_pad_euc_ward,
      cex=.6,lwd=1.5);box()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-47-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-48-2.png)<!-- -->
 
 ``` r
 grupo<-cutree(da_pad_euc_ward,2)
@@ -1059,7 +1082,7 @@ city_kgr_beta_group <- city_kgr_beta_anom |>
            by="name_muni")
 
 city_kgr_beta_group  |>
-  mutate( grupo = as_factor(grupo )) |> 
+  mutate( grupo = as_factor(grupo)) |> 
   drop_na() |> 
      ggplot() +
      geom_sf(aes(fill=grupo), color="transparent",
@@ -1080,7 +1103,68 @@ city_kgr_beta_group  |>
      scale_fill_viridis_d()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-47-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-48-3.png)<!-- -->
+
+``` r
+kgr_maps |> 
+  left_join(
+    data.frame(
+      city = city_kgr_beta_group$name_muni,
+      grupo = city_kgr_beta_group$grupo
+    ),by="city"
+  ) |> 
+  filter(grupo == 1) |> 
+  select(X:xco2,-anom_xco2) |> 
+  mutate(
+    season_year = paste0("epoch-",str_remove(season_year,"_\\d+"))
+  ) |> 
+  arrange(season_year) |> 
+  pivot_wider(names_from = season_year, values_from = xco2) |> 
+  select(-X,-Y) |> 
+  cor() |> 
+  corrplot::corrplot(method = "color",
+         outline = T,,
+         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+         diag = FALSE,
+         # addCoef.col = "black",
+         cl.ratio = 0.2,
+         cl.length = 5,
+         number.cex = 0.8) 
+```
+
+![](README_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->
+
+``` r
+
+kgr_maps |> 
+  left_join(
+    data.frame(
+      city = city_kgr_beta_group$name_muni,
+      grupo = city_kgr_beta_group$grupo
+    ),by="city"
+  ) |> 
+  filter(grupo == 2) |> 
+  select(X:xco2,-anom_xco2) |> 
+  mutate(
+    season_year = paste0("epoch-",str_remove(season_year,"_\\d+"))
+  ) |> 
+  arrange(season_year) |> 
+  pivot_wider(names_from = season_year, values_from = xco2) |> 
+  select(-X,-Y) |> 
+  cor() |> 
+  corrplot::corrplot(method = "color",
+         outline = T,,
+         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+         diag = FALSE,
+         # addCoef.col = "black",
+         cl.ratio = 0.2,
+         cl.length = 5,
+         number.cex = 0.8) 
+```
+
+![](README_files/figure-gfm/unnamed-chunk-49-2.png)<!-- -->
 
 #### Por período (até e após 2018)
 
@@ -1208,7 +1292,7 @@ kgr_maps_cover |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-50-1.png)<!-- --> \###
+![](README_files/figure-gfm/unnamed-chunk-52-1.png)<!-- --> \###
 Estatísticas descritivas por classe de uso do solo
 
 ``` r
@@ -1233,7 +1317,7 @@ kgr_maps_cover |>
   )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-51-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->
 
 Retirando os top 7 usos do solo no estado.
 
@@ -1511,7 +1595,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-61-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-63-1.png)<!-- -->
 
 ``` r
 # kgr_maps_beta_cover_group |> 
@@ -1524,6 +1608,59 @@ kgr_maps_beta_cover_group |>
 #   scale_fill_viridis_d() +
 #   theme_bw()
 ```
+
+``` r
+# primeiro analisa xCO2
+# depois, analisa beta xCO2 período
+# beta xCO2 período poderia ser maior ou menor com a MUDANÇA no uso da terra
+# se passou de pastagem para cana por exemplo
+# tem isso também, a mudança no uso da terra pode estar influenciando na derivada xCO2
+# agora, valor médio xCO2, acredito, próximo oceano menor
+# do que pro interior
+```
+
+## RESULTADOS
+
+Resultados e Discussão
+
+A análise de agrupamento aplicada às anomalias permitiu identificar dois
+padrões espaciais bem definidos no estado de São Paulo (Figura do
+estado). O Grupo 1 concentrou-se predominantemente nas regiões sul e
+sudoeste do estado, enquanto o Grupo 2 abrangeu as porções norte e
+nordeste. Essa distribuição espacial parece refletir contrastes
+ambientais e possivelmente de uso da terra entre os dois agrupamentos,
+ou seja, respostas distintas nas séries temporais das anomalias.
+
+Os corrplots (do Grupo 1) apresenta maior coerência/persistência
+temporal entre as épocas avaliadas, com correlações predominantemente
+positivas (PODEMOS SOMAR AS SIGNIFICÂNCIAS POSTERIORMENT) entre
+diferentes períodos, indicando um comportamento mais estável das
+anomalias, sugerindo menor variabilidade interanual e maior consistência
+na resposta ambiental. Em contraste, o Grupo 2 (Chamar outra figura)
+exibiu correlações mais fracas (PODEMOS CONTAR SIGNIFICANCIAS) e
+heterogêneas, com alternância de valores positivos e negativos,
+indicando maior variabilidade temporal das anomalias e possivelmente uma
+resposta mais sensível a flutuações climáticas e de manejo.
+
+A composição de uso e cobertura do solo em cada agrupamento (Figura Dos
+Gráficos de Colunas) corrobora essa interpretação/afirmação. O Grupo 1 é
+caracterizado por maior proporção de formações florestais e plantações
+florestais, além de menor presença de áreas agrícolas intensivas, como
+cana-de-açúcar e soja. Já o Grupo 2 apresenta predominância de
+pastagens, mosaicos de uso e áreas agrícolas, especialmente de
+cana-de-açúcar, refletindo paisagens mais antropizadas.
+
+Essas diferenças estruturais explicam, em parte, o comportamento
+distinto das anomalias nos dois agrupamentos. As regiões florestadas e
+de uso menos intensivo (Grupo 1) tendem a apresentar menor amplitude e
+maior estabilidade das anomalias, enquanto as áreas agrícolas (Grupo 2)
+mostram padrões mais dinâmicos e irregulares, possivelmente relacionados
+às mudanças sazonais de cultivo, manejo e variabilidade climática local.
+
+Assim, o agrupamento baseado em anomalias revelou os padrões espaciais
+consistentes, mas também relações entre a dinâmica temporal das
+anomalias e o tipo de cobertura do solo, sugerindo que o uso e manejo do
+território desempenham papel determinante na variabilidade observada.
 
 ``` r
 kgr_maps_beta_cover_group |> 
@@ -1541,17 +1678,7 @@ kgr_maps_beta_cover_group |>
   theme_ridges()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-63-1.png)<!-- -->
-
-``` r
-# primeiro analisa xCO2
-# depois, analisa beta xCO2 período
-# beta xCO2 período poderia ser maior ou menor com a MUDANÇA no uso da terra
-# se passou de pastagem para cana por exemplo
-# tem isso também, a mudança no uso da terra pode estar influenciando na derivada xCO2
-# agora, valor médio xCO2, acredito, próximo oceano menor
-# do que pro interior
-```
+![](README_files/figure-gfm/unnamed-chunk-66-1.png)<!-- -->
 
 ## MATERIAL COMPLEMENTAR
 
@@ -1575,92 +1702,92 @@ map(season,~{
 #> [[1]]
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-65-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-1.png)<!-- -->
 
     #> 
     #> [[2]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-2.png)<!-- -->
 
     #> 
     #> [[3]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-3.png)<!-- -->
 
     #> 
     #> [[4]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-4.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-4.png)<!-- -->
 
     #> 
     #> [[5]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-5.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-5.png)<!-- -->
 
     #> 
     #> [[6]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-6.png)<!-- -->
 
     #> 
     #> [[7]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-7.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-7.png)<!-- -->
 
     #> 
     #> [[8]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-8.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-8.png)<!-- -->
 
     #> 
     #> [[9]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-9.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-9.png)<!-- -->
 
     #> 
     #> [[10]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-10.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-10.png)<!-- -->
 
     #> 
     #> [[11]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-11.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-11.png)<!-- -->
 
     #> 
     #> [[12]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-12.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-12.png)<!-- -->
 
     #> 
     #> [[13]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-13.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-13.png)<!-- -->
 
     #> 
     #> [[14]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-14.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-14.png)<!-- -->
 
     #> 
     #> [[15]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-15.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-15.png)<!-- -->
 
     #> 
     #> [[16]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-16.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-16.png)<!-- -->
 
     #> 
     #> [[17]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-17.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-17.png)<!-- -->
 
     #> 
     #> [[18]]
 
-![](README_files/figure-gfm/unnamed-chunk-65-18.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-18.png)<!-- -->
 
 ### Padrões espaciais de Anomalia de XCO2 para o estado por estação
 
@@ -1681,89 +1808,89 @@ map(season,~{
 #> [[1]]
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-66-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-1.png)<!-- -->
 
     #> 
     #> [[2]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-2.png)<!-- -->
 
     #> 
     #> [[3]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-3.png)<!-- -->
 
     #> 
     #> [[4]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-4.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-4.png)<!-- -->
 
     #> 
     #> [[5]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-5.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-5.png)<!-- -->
 
     #> 
     #> [[6]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-6.png)<!-- -->
 
     #> 
     #> [[7]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-7.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-7.png)<!-- -->
 
     #> 
     #> [[8]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-8.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-8.png)<!-- -->
 
     #> 
     #> [[9]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-9.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-9.png)<!-- -->
 
     #> 
     #> [[10]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-10.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-10.png)<!-- -->
 
     #> 
     #> [[11]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-11.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-11.png)<!-- -->
 
     #> 
     #> [[12]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-12.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-12.png)<!-- -->
 
     #> 
     #> [[13]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-13.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-13.png)<!-- -->
 
     #> 
     #> [[14]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-14.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-14.png)<!-- -->
 
     #> 
     #> [[15]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-15.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-15.png)<!-- -->
 
     #> 
     #> [[16]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-16.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-16.png)<!-- -->
 
     #> 
     #> [[17]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-17.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-17.png)<!-- -->
 
     #> 
     #> [[18]]
 
-![](README_files/figure-gfm/unnamed-chunk-66-18.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-18.png)<!-- -->
