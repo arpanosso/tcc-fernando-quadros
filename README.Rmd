@@ -1508,7 +1508,7 @@ kgr_maps_beta_cover_group <- kgr_maps_beta_anom |>
       rename(city = name_muni),
     by=c("city")
     ) |> 
-  select(-xco2, -anom_xco2, -year, -season_year, -season)
+  select(-anom_xco2, -year, -season_year, -season)
 ```
 
 ```{r}
@@ -1581,15 +1581,15 @@ kgr_maps_beta_cover_group |>
 
 
 ```{r}
-# kgr_maps_beta_cover_group |> 
-#   mutate(
-#     descricao = ifelse(descricao %in% my_top_7_cover,
-#                          descricao, "Other")
-#   ) |> 
-#   ggplot(aes(x=as_factor(grupo), y=anomaly_xco2, fill=as_factor(grupo))) +
-#   geom_boxplot() +
-#   scale_fill_viridis_d() +
-#   theme_bw()
+kgr_maps_beta_cover_group |>
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover,
+                         descricao, "Other")
+  ) |>
+  ggplot(aes(x=as_factor(grupo), y=xco2, fill=as_factor(grupo))) +
+  geom_boxplot() +
+  scale_fill_viridis_d() +
+  theme_bw()
 ```
 
 
