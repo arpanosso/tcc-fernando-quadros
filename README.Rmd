@@ -21,6 +21,7 @@ knitr::opts_chunk$set(
 
 #### Carregando pacotes
 ```{r}
+library(patchwork)
 library(tidyverse)
 library(ggridges)
 library(ggpubr)
@@ -169,7 +170,6 @@ data_set_sp %>%
     legend.position = "top"
     )
 ```
-
 
 ```{r}
 data_set_sp %>%
@@ -333,18 +333,18 @@ A definição do grid a ser estimado para pontos não amostrados para o estado d
 
 ```{r}
 grid_geral <- read_rds("data/grid-city.rds")
-# citys |>
-#   filter(abbrev_state == "SP") |>
-#    ggplot() +
-#      geom_sf(aes_string(), color="black",
-#               size=.05, show.legend = TRUE) +
-#   theme_minimal() +
-#   geom_point(
-#     data = grid_geral |>
-#   sample_n(1000),
-#   aes(X,Y),
-#   color = "red"
-#   )
+citys |>
+  filter(abbrev_state == "SP") |>
+   ggplot() +
+     geom_sf(aes_string(), color="black",
+              size=.05, show.legend = TRUE) +
+  theme_minimal() +
+  geom_point(
+    data = grid_geral |>
+  sample_n(1000),
+  aes(X,Y),
+  color = "red"
+  )
 ```
 
 
@@ -583,6 +583,7 @@ kgr_maps <- kgr_maps |>
   )
 ```
 
+
 ```{r}
 kgr_maps |> 
   select(X:xco2,-anom_xco2) |> 
@@ -606,6 +607,86 @@ kgr_maps |>
 
 
 
+```{r}
+lims <- range(kgr_maps$xco2, na.rm = TRUE)
+mapa_seca <- citys |> 
+  filter(abbrev_state == "SP") |> 
+  left_join(
+    kgr_maps |>
+      mutate(
+        season = str_extract(season_year,"[:digit:]$")
+      ) |> 
+      filter(season == "1") |> 
+      group_by(
+        season, X, Y, city
+      ) |> 
+      summarise(
+        xco2 = mean(xco2, na.rm = TRUE),
+        .groups = "drop"
+      ) |> 
+          rename(name_muni = city),
+           by="name_muni"
+  ) |>
+  drop_na() |>
+  ggplot() +
+  geom_sf(aes(fill=xco2), color="transparent",
+          size=.05, show.legend = TRUE)  +
+  geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE, lwd=.05, color="black") +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = rel(.9), color = "black"),
+    axis.title.x = element_text(size = rel(1.1), color = "black"),
+    axis.text.y = element_text(size = rel(.9), color = "black"),
+    axis.title.y = element_text(size = rel(1.1), color = "black"),
+    legend.text = element_text(size = rel(1), color = "black"),
+    legend.title = element_text(face = 'bold', size = rel(1.2))
+  ) +
+  labs(fill = "",
+       x = 'Longitude',
+       y = 'Latitude') +
+  scale_fill_viridis_c(limits = c(387.5,390))
+
+mapa_chuvosa <- citys |> 
+  filter(abbrev_state == "SP") |> 
+  left_join(
+    kgr_maps |>
+      mutate(
+        season = str_extract(season_year,"[:digit:]$")
+      ) |> 
+      filter(season == "2") |> 
+      group_by(
+        season, X, Y, city
+      ) |> 
+      summarise(
+        xco2 = mean(xco2, na.rm = TRUE),
+        .groups = "drop"
+      ) |> 
+          rename(name_muni = city),
+           by="name_muni"
+  ) |>
+  drop_na() |>
+  ggplot() +
+  geom_sf(aes(fill=xco2), color="transparent",
+          size=.05, show.legend = TRUE)  +
+  geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE, lwd=.05, color="black") +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = rel(.9), color = "black"),
+    axis.title.x = element_text(size = rel(1.1), color = "black"),
+    axis.text.y = element_text(size = rel(.9), color = "black"),
+    axis.title.y = element_text(size = rel(1.1), color = "black"),
+    legend.text = element_text(size = rel(1), color = "black"),
+    legend.title = element_text(face = 'bold', size = rel(1.2))
+  ) +
+  labs(fill = "",
+       x = 'Longitude',
+       y = 'Latitude') +
+  scale_fill_viridis_c(limits = c(387.5,390))
+
+mapa_seca
+mapa_chuvosa
+# (mapa_seca + mapa_chuvosa) + plot_layout(guides = "collect")
+```
 
 
 #### Centroide de massa, cold and hotspots
