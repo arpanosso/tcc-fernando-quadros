@@ -141,6 +141,7 @@ data_set_sp %>%
   #   classe = ifelse(tratamento ==
   #            "UC_desm" | tratamento == "TI_desm",
   #                   "Des","Con")
+    season = ifelse(season=="dry","seco","chu")
   ) %>%
   ggplot(aes(y=epoch)) +
   geom_density_ridges(rel_min_height = 0.03,
@@ -148,8 +149,15 @@ data_set_sp %>%
                       alpha = .6, color = "black"
   ) +
   scale_fill_cyclical(values = c("#ff8080","#238B45"),
-                      name = "classe", guide = "legend") +
-  theme_ridges()
+                      name = "", guide = "legend") +
+  theme_ridges() +
+  labs(x=expression(paste(X[CO2]," (ppm)")),
+       y="Épocas") +
+  theme(
+    axis.title.x = element_text(hjust = .5),
+    axis.title.y = element_text(hjust = .5),
+    legend.position = "top"
+    )
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
@@ -1084,11 +1092,11 @@ city_kgr_beta_group <- city_kgr_beta_anom |>
 city_kgr_beta_group  |>
   mutate( grupo = as_factor(grupo)) |> 
   drop_na() |> 
-     ggplot() +
-     geom_sf(aes(fill=grupo), color="transparent",
-             size=.05, show.legend = TRUE)  +
-  geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=3, show.legend = FALSE) +
-     theme_bw() +
+  ggplot() +
+  geom_sf(aes(fill=grupo), color="transparent",
+          size=.05, show.legend = TRUE)  +
+  geom_sf(data=citys |> filter(abbrev_state == "SP"), fill="transparent", size=.5, show.legend = FALSE) +
+  theme_bw() +
    theme(
      axis.text.x = element_text(size = rel(.9), color = "black"),
      axis.title.x = element_text(size = rel(1.1), color = "black"),
