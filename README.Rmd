@@ -2,6 +2,7 @@
 output: github_document
 ---
 
+
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 ```{r, include = FALSE}
@@ -29,6 +30,7 @@ library(geobr)
 library(gstat)
 library(vegan)
 source("r/my-function.R")
+citys <- geobr::read_municipality(showProgress = FALSE)
 ```
 
 #### Filtrando os dados para o estado de São Paulo
@@ -81,33 +83,40 @@ data_set_sp <- read_rds("data/nasa-xco2-sp.rds") |>
 
 #### Existe uma tendência regional nos dados, e ela deve ser retirada para esse trabalho
 
-```{r}
-# data_set_sp |>
-#   sample_n(1000) |>
-#   drop_na() |>
-#   mutate( year = year - min(year)) |>
-#   ggplot(aes(x=date, y=xco2)) +
-#   geom_point() +
-#   geom_point(shape=21,color="black",fill="gray") +
-#   geom_smooth(method = "lm") +
-#   stat_regline_equation(aes(
-#   label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
-#   theme_bw() +
-#   labs(x="Ano",y="xco2")
-```
 
 #### Análise de regressão linear simples para caracterização da tendência.
 ```{r}
-mod_trend_xco2 <- lm(xco2 ~ year, 
+mod_trend_xco2 <- lm(xco2 ~ date, 
           data = data_set_sp |> 
             filter(xco2_quality_flag == 0) |> 
             drop_na() |> 
             mutate( year = year - min(year)) 
           )
 # mod_trend_xco2
-# summary.lm(mod_trend_xco2)
+sm <- summary.lm(mod_trend_xco2)
 ```
 
+
+```{r}
+data_set_sp |>
+  # sample_n(1000) |>
+  drop_na() |>
+  mutate( year = year - min(year)) |>
+  ggplot(aes(x=date, y=xco2)) +
+  geom_point(alpha = 0.25, size = 1) +
+  # geom_point(shape=21,color="black",fill="gray") +
+  geom_smooth(method = "lm",
+              color = "red", linetype = "dashed",
+              size=1) +
+  stat_regline_equation(aes(
+  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
+  theme_minimal() +
+  labs(x="Data",y=expression(paste(X[CO2]," (ppm)"))) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  annotate("text", x =(2018-1970)*365.5, y = 423.5,
+           label = paste0("p-value: < 2.2e-16"), hjust = 0, vjust = 1, size = 4)
+
+```
 
 ```{r}
 a_co2 <- mod_trend_xco2$coefficients[[1]]
