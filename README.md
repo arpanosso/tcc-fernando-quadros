@@ -75,7 +75,7 @@ data_set_sp <- read_rds("data/nasa-xco2-sp.rds") |>
 #### Análise de regressão linear simples para caracterização da tendência.
 
 ``` r
-mod_trend_xco2 <- lm(xco2 ~ date, 
+mod_trend_xco2 <- lm(xco2 ~ year, 
           data = data_set_sp |> 
             filter(xco2_quality_flag == 0) |> 
             drop_na() |> 
