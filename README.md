@@ -646,7 +646,7 @@ mapa_seca <- citys |>
   labs(fill = "",
        x = 'Longitude',
        y = 'Latitude') +
-  scale_fill_viridis_c(limits = c(387.5,390))
+  scale_fill_viridis_c(limits = c(387,390))
 
 mapa_chuvosa <- citys |> 
   filter(abbrev_state == "SP") |> 
@@ -683,7 +683,7 @@ mapa_chuvosa <- citys |>
   labs(fill = "",
        x = 'Longitude',
        y = 'Latitude') +
-  scale_fill_viridis_c(limits = c(387.5,390))
+  scale_fill_viridis_c(limits = c(387,390))
 
 mapa_seca
 ```
@@ -1150,16 +1150,16 @@ Anomalia para cada estação no período todo (TOP 10 )
 
 ``` r
 kgr_maps_wider <- kgr_maps |> 
-  select(season_year, X,Y,city,anom_xco2) |> 
+  select(season_year, X,Y,city,xco2) |> 
   mutate(season = str_sub(season_year,1,5)) |> 
   group_by(season, city) |> 
-  summarise(anom_xco2 = mean(anom_xco2, na.rm = TRUE)) |> 
+  summarise(xco2 = mean(xco2, na.rm = TRUE)) |> 
   pivot_wider(names_from = season,
-              values_from = anom_xco2,names_prefix = "season_")
+              values_from = xco2,names_prefix = "season_")
 
 name_muni <- kgr_maps_wider |> pull(city)
 kgr_maps_wider_xco2_anomaly <- kgr_maps_wider |> 
-  select(season_15_16:season_23_24) #|> 
+  select(season_18_19:season_23_24) #|> 
   # select(ends_with("2"))
   
 mc <- cor(kgr_maps_wider_xco2_anomaly)
@@ -1174,6 +1174,7 @@ da_pad<-decostand(kgr_maps_wider_xco2_anomaly,
                   na.rm=TRUE)
 da_pad_euc<-vegdist(da_pad,"euclidean") 
 da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- name_muni
 plot(da_pad_euc_ward, 
      ylab="Distância Euclidiana",
      xlab="Acessos", hang=-1,
@@ -1216,6 +1217,69 @@ city_kgr_beta_group  |>
 ![](README_files/figure-gfm/unnamed-chunk-49-3.png)<!-- -->
 
 ``` r
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = 0.2,
+     las = 1,
+     axes = FALSE)
+
+axis(2, las = 1, cex.axis = 0.8)
+box()
+
+# Adiciona uma grade leve
+# abline(h = seq(0, max(da_pad_euc_ward$height), by = 0.5), col = "gray90", lty = 3)
+
+# Opcional: desenhar retângulos delimitando grupos (exemplo: 2 grupos)
+rect.hclust(da_pad_euc_ward, k = 2, border = c("firebrick3", "steelblue3"))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-50-1.png)<!-- -->
+
+``` r
+library(ggplot2)
+library(ggdendro)
+
+# Converte o objeto hclust em dados para o ggplot
+dend_data <- dendro_data(da_pad_euc_ward, type = "rectangle")
+
+# Cria o dendrograma com visual limpo e científico
+ggplot() +
+  geom_segment(data = dend_data$segments,
+               aes(x = x, y = y, xend = xend, yend = yend),
+               color = "gray30", linewidth = 0.6) +
+  geom_text(data = dend_data$labels,
+            aes(x = x, y = y - 0.05, label = label),
+            angle = 90, hjust = 1, size = 2.5) +
+  theme_minimal() +
+  labs(x = "Municípios", 
+       y = "Distância Euclidiana",
+       title = "") +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 10),
+    plot.title = element_text(size = 12, face = "bold", hjust = 0.5)
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-51-1.png)<!-- -->
+
+``` r
+library(dendextend)
+clusters <- cutree(da_pad_euc_ward, k = 2)
+dend <- as.dendrogram(da_pad_euc_ward)
+dend_colored <- color_branches(dend, k = 2)
+plot(dend_colored, main = "Agrupamento Hierárquico - Ward.D2")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-52-1.png)<!-- -->
+
+``` r
 kgr_maps |> 
   left_join(
     data.frame(
@@ -1243,7 +1307,7 @@ kgr_maps |>
          number.cex = 0.8) 
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-50-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->
 
 ``` r
 
@@ -1274,7 +1338,7 @@ kgr_maps |>
          number.cex = 0.8) 
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-50-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-53-2.png)<!-- -->
 
 #### Por período (até e após 2018)
 
@@ -1402,7 +1466,7 @@ kgr_maps_cover |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-53-1.png)<!-- --> \###
+![](README_files/figure-gfm/unnamed-chunk-56-1.png)<!-- --> \###
 Estatísticas descritivas por classe de uso do solo
 
 ``` r
@@ -1427,7 +1491,7 @@ kgr_maps_cover |>
   )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-57-1.png)<!-- -->
 
 Retirando os top 7 usos do solo no estado.
 
@@ -1680,8 +1744,8 @@ kgr_maps_beta_cover_group |>
 #> # A tibble: 2 × 9
 #>   grupo     N    MIN   MEAN MEDIAN   MAX STD_DV     SKW   KRT
 #>   <int> <int>  <dbl>  <dbl>  <dbl> <dbl>  <dbl>   <dbl> <dbl>
-#> 1     1  3441 -0.159 0.0608 0.0643 0.237 0.0557 -0.530  1.17 
-#> 2     2  5249 -0.123 0.104  0.103  0.295 0.0538 -0.0139 0.493
+#> 1     1  5576 -0.159 0.105  0.103  0.295 0.0528 -0.0313 0.877
+#> 2     2  3114 -0.157 0.0551 0.0591 0.205 0.0546 -0.525  0.843
 ```
 
 ``` r
@@ -1705,21 +1769,94 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-64-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-67-1.png)<!-- -->
+
+``` r
+kgr_maps_beta_cover_group |>
+  mutate(
+    descricao = ifelse(descricao %in% my_top_7_cover, descricao, "Outros")
+  ) |>
+  group_by(grupo, descricao) |>
+  summarise(count = n(), .groups = "drop") |>
+  group_by(grupo) |>
+  mutate(perc = count / sum(count)) |>
+  ungroup() |>
+  mutate(
+    descricao = factor(descricao, levels = unique(descricao)),  # mantém ordem fixa
+    grupo = factor(grupo, levels = c(1, 2),
+                   labels = c("Grupo 1 – Agrícola", "Grupo 2 – Florestal"))
+  ) |>
+  ggplot(aes(x = grupo, y = perc * 100, fill = descricao)) +
+  geom_col(color = "gray20", width = 0.7, position = position_stack(reverse = TRUE)) +
+  geom_label(
+    aes(label = sprintf("%.1f%%", perc * 100)),
+    position = position_stack(vjust = 0.5, reverse = TRUE),
+    color = "black",
+    fill = alpha("white", 0.75),
+    label.size = 0,
+    size = 3.2,
+    family = "sans",
+    fontface = "bold"
+  ) +
+  scale_fill_manual(
+    name = "Uso e cobertura do solo",
+    values = paleta_cores
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.05)),
+    limits = c(0, 100)
+  ) +
+  labs(
+    x = NULL,
+    y = "Proporção (%)",
+    title = ""
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_line(color = "gray80", linewidth = 0.4),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text = element_text(size = 11, color = "black"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 13),
+    legend.position = "right",
+    legend.key.size = unit(0.5, "cm")
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-68-1.png)<!-- -->
 
 ``` r
 kgr_maps_beta_cover_group |>
   mutate(
     descricao = ifelse(descricao %in% my_top_7_cover,
-                         descricao, "Other")
+                       descricao, "Other"),
+    grupo = factor(grupo, labels = c("Grupo 1 (Agrícola)", "Grupo 2 (Floresta)"))
   ) |>
-  ggplot(aes(x=as_factor(grupo), y=xco2, fill=as_factor(grupo))) +
-  geom_boxplot() +
+  ggplot(aes(x = grupo, y = xco2, fill = grupo)) +
+  geom_violin(trim = FALSE, color = NA) +  # violino suave
+  geom_boxplot(width = 0.15, outlier.shape = NA, fill = "white", color = "gray30", lwd = 0.3) +
   scale_fill_viridis_d() +
-  theme_bw()
+  labs(
+    x = "Grupo de Municípios",
+    y = expression(X[CO2]~"(ppm)"),
+    fill = "Grupo",
+    title = ""
+  ) + 
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(size = 10, face = "bold"),
+    axis.text.y = element_text(size = 9),
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    legend.position = "none"
+  )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-65-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-69-1.png)<!-- -->
 
 ``` r
 # primeiro analisa xCO2
@@ -1790,7 +1927,7 @@ kgr_maps_beta_cover_group |>
   theme_ridges()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-67-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-71-1.png)<!-- -->
 
 ## MATERIAL COMPLEMENTAR
 
@@ -1814,92 +1951,92 @@ map(season,~{
 #> [[1]]
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-68-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-1.png)<!-- -->
 
     #> 
     #> [[2]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-2.png)<!-- -->
 
     #> 
     #> [[3]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-3.png)<!-- -->
 
     #> 
     #> [[4]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-4.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-4.png)<!-- -->
 
     #> 
     #> [[5]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-5.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-5.png)<!-- -->
 
     #> 
     #> [[6]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-6.png)<!-- -->
 
     #> 
     #> [[7]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-7.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-7.png)<!-- -->
 
     #> 
     #> [[8]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-8.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-8.png)<!-- -->
 
     #> 
     #> [[9]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-9.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-9.png)<!-- -->
 
     #> 
     #> [[10]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-10.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-10.png)<!-- -->
 
     #> 
     #> [[11]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-11.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-11.png)<!-- -->
 
     #> 
     #> [[12]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-12.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-12.png)<!-- -->
 
     #> 
     #> [[13]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-13.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-13.png)<!-- -->
 
     #> 
     #> [[14]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-14.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-14.png)<!-- -->
 
     #> 
     #> [[15]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-15.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-15.png)<!-- -->
 
     #> 
     #> [[16]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-16.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-16.png)<!-- -->
 
     #> 
     #> [[17]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-17.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-17.png)<!-- -->
 
     #> 
     #> [[18]]
 
-![](README_files/figure-gfm/unnamed-chunk-68-18.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-18.png)<!-- -->
 
 ### Padrões espaciais de Anomalia de XCO2 para o estado por estação
 
@@ -1920,89 +2057,89 @@ map(season,~{
 #> [[1]]
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-69-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-1.png)<!-- -->
 
     #> 
     #> [[2]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-2.png)<!-- -->
 
     #> 
     #> [[3]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-3.png)<!-- -->
 
     #> 
     #> [[4]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-4.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-4.png)<!-- -->
 
     #> 
     #> [[5]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-5.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-5.png)<!-- -->
 
     #> 
     #> [[6]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-6.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-6.png)<!-- -->
 
     #> 
     #> [[7]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-7.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-7.png)<!-- -->
 
     #> 
     #> [[8]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-8.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-8.png)<!-- -->
 
     #> 
     #> [[9]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-9.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-9.png)<!-- -->
 
     #> 
     #> [[10]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-10.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-10.png)<!-- -->
 
     #> 
     #> [[11]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-11.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-11.png)<!-- -->
 
     #> 
     #> [[12]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-12.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-12.png)<!-- -->
 
     #> 
     #> [[13]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-13.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-13.png)<!-- -->
 
     #> 
     #> [[14]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-14.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-14.png)<!-- -->
 
     #> 
     #> [[15]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-15.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-15.png)<!-- -->
 
     #> 
     #> [[16]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-16.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-16.png)<!-- -->
 
     #> 
     #> [[17]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-17.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-17.png)<!-- -->
 
     #> 
     #> [[18]]
 
-![](README_files/figure-gfm/unnamed-chunk-69-18.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-73-18.png)<!-- -->
