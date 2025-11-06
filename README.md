@@ -100,9 +100,7 @@ data_set_sp |>
   label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
   theme_minimal() +
   labs(x="Data",y=expression(paste(X[CO2]," (ppm)"))) +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
-  annotate("text", x =(2018-1970)*365.5, y = 423.5,
-           label = paste0("p-value: < 2.2e-16"), hjust = 0, vjust = 1, size = 4)
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
@@ -150,14 +148,14 @@ data_set_sp %>%
   #   classe = ifelse(tratamento ==
   #            "UC_desm" | tratamento == "TI_desm",
   #                   "Des","Con")
-    season = ifelse(season=="dry","seco","chu")
+    season = ifelse(season=="dry","seco","chuvosa")
   ) %>%
   ggplot(aes(y=epoch)) +
   geom_density_ridges(rel_min_height = 0.03,
                       aes(x=xco2, fill=season),
                       alpha = .6, color = "black"
   ) +
-  scale_fill_cyclical(values = c("#ff8080","#238B45"),
+  scale_fill_cyclical(values = c("#238B45","#ff8080"),
                       name = "", guide = "legend") +
   theme_ridges() +
   labs(x=expression(paste(X[CO2]," (ppm)")),
