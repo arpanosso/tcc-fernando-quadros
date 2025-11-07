@@ -1253,6 +1253,7 @@ ggplot() +
 
 ```{r}
 library(dendextend)
+da_pad_euc_ward$labels <- NULL
 clusters <- cutree(da_pad_euc_ward, k = 2)
 dend <- as.dendrogram(da_pad_euc_ward)
 dend_colored <- color_branches(dend, k = 2)
@@ -1261,7 +1262,7 @@ plot(dend_colored, main = "Agrupamento Hierárquico - Ward.D2")
 
 
 ```{r}
-kgr_maps |> 
+mcor_g1 <- kgr_maps |> 
   left_join(
     data.frame(
       city = city_kgr_beta_group$name_muni,
@@ -1276,18 +1277,18 @@ kgr_maps |>
   arrange(season_year) |> 
   pivot_wider(names_from = season_year, values_from = xco2) |> 
   select(-X,-Y) |> 
-  cor() |> 
-  corrplot::corrplot(method = "color",
-         outline = T,,
-         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
-         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
-         diag = FALSE,
-         # addCoef.col = "black",
-         cl.ratio = 0.2,
-         cl.length = 5,
-         number.cex = 0.8) 
+  cor()
+corrplot::corrplot(mcor_g1, method = "color",
+                   outline = T,,
+                   addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+                   tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+                   diag = FALSE,
+                   # addCoef.col = "black",
+                   cl.ratio = 0.2,
+                   cl.length = 5,
+                   number.cex = 0.8) 
 
-kgr_maps |> 
+mcor_g2 <- kgr_maps |> 
   left_join(
     data.frame(
       city = city_kgr_beta_group$name_muni,
@@ -1302,16 +1303,75 @@ kgr_maps |>
   arrange(season_year) |> 
   pivot_wider(names_from = season_year, values_from = xco2) |> 
   select(-X,-Y) |> 
-  cor() |> 
-  corrplot::corrplot(method = "color",
-         outline = T,,
-         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
-         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
-         diag = FALSE,
-         # addCoef.col = "black",
-         cl.ratio = 0.2,
-         cl.length = 5,
-         number.cex = 0.8) 
+  cor() 
+corrplot::corrplot(mcor_g2, method = "color",
+                   outline = T,,
+                   addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+                   tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+                   diag = FALSE,
+                   # addCoef.col = "black",
+                   cl.ratio = 0.2,
+                   cl.length = 5,
+                   number.cex = 0.8)
+  
+mcor_f <- mcor_g1  
+  
+for(i in 1:nrow(mcor_f)){
+  for(j in 1:ncol(mcor_f)){
+    if(i<=j) mcor_f[i,j] <- mcor_g2[i,j]
+  }
+}
+
+corrplot::corrplot(mcor_f, method = "color",
+                   outline = TRUE, ,
+                   addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+                   tl.cex = 1, cl.cex = 1, bg="azure2",
+                   # addCoef.col = "black",
+                   cl.ratio = 0.2,
+                   cl.length = 5,
+                   number.cex = 0.8)
+  
+```
+
+
+```{r}
+library(ggcorrplot)
+
+# Exemplo genérico: supondo que já existam as duas matrizes
+# cor_g1 e cor_g2 com as mesmas dimensões
+vars <- colnames(mcor_g1)
+
+# Cria matriz "base" com a média das duas (só pra preencher)
+cor_comb <- (mcor_g1 + mcor_g2) / 2
+
+# Substitui a metade inferior pela do grupo 1
+cor_comb[lower.tri(cor_comb)] <- mcor_g1[lower.tri(mcor_g1)]
+# Substitui a metade superior pela do grupo 2
+cor_comb[upper.tri(cor_comb)] <- mcor_g2[upper.tri(mcor_g2)]
+
+# Gera o gráfico bonito
+ggcorrplot(
+  mcor_f,
+  # hc.order = TRUE,        # reordena por agrupamento hierárquico
+  type = "full",          # mostra a matriz inteira
+  # lab = TRUE,             # mostra valores numéricos
+  lab_size = 2.8,
+  show.legend = TRUE,
+  tl.cex = 10,
+  tl.srt = 45,
+  colors = c("#B2182B", "white", "#2166AC"),
+  outline.color = "gray40"
+) +
+  labs(
+    title = "Comparação das correlações entre os grupos",
+    subtitle = "A diagonal inferior representa o Grupo 1 (Florestal) e a superior o Grupo 2 (Agrícola)",
+    x= "Épocas (Grupo 1)",
+    y= "Épocas (Grupo 2)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
 ```
 
 #### Por período (até e após 2018)

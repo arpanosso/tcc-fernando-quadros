@@ -1269,6 +1269,7 @@ ggplot() +
 
 ``` r
 library(dendextend)
+da_pad_euc_ward$labels <- NULL
 clusters <- cutree(da_pad_euc_ward, k = 2)
 dend <- as.dendrogram(da_pad_euc_ward)
 dend_colored <- color_branches(dend, k = 2)
@@ -1278,7 +1279,7 @@ plot(dend_colored, main = "Agrupamento Hierárquico - Ward.D2")
 ![](README_files/figure-gfm/unnamed-chunk-52-1.png)<!-- -->
 
 ``` r
-kgr_maps |> 
+mcor_g1 <- kgr_maps |> 
   left_join(
     data.frame(
       city = city_kgr_beta_group$name_muni,
@@ -1293,23 +1294,23 @@ kgr_maps |>
   arrange(season_year) |> 
   pivot_wider(names_from = season_year, values_from = xco2) |> 
   select(-X,-Y) |> 
-  cor() |> 
-  corrplot::corrplot(method = "color",
-         outline = T,,
-         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
-         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
-         diag = FALSE,
-         # addCoef.col = "black",
-         cl.ratio = 0.2,
-         cl.length = 5,
-         number.cex = 0.8) 
+  cor()
+corrplot::corrplot(mcor_g1, method = "color",
+                   outline = T,,
+                   addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+                   tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+                   diag = FALSE,
+                   # addCoef.col = "black",
+                   cl.ratio = 0.2,
+                   cl.length = 5,
+                   number.cex = 0.8) 
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->
 
 ``` r
 
-kgr_maps |> 
+mcor_g2 <- kgr_maps |> 
   left_join(
     data.frame(
       city = city_kgr_beta_group$name_muni,
@@ -1324,19 +1325,83 @@ kgr_maps |>
   arrange(season_year) |> 
   pivot_wider(names_from = season_year, values_from = xco2) |> 
   select(-X,-Y) |> 
-  cor() |> 
-  corrplot::corrplot(method = "color",
-         outline = T,,
-         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
-         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
-         diag = FALSE,
-         # addCoef.col = "black",
-         cl.ratio = 0.2,
-         cl.length = 5,
-         number.cex = 0.8) 
+  cor() 
+corrplot::corrplot(mcor_g2, method = "color",
+                   outline = T,,
+                   addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+                   tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+                   diag = FALSE,
+                   # addCoef.col = "black",
+                   cl.ratio = 0.2,
+                   cl.length = 5,
+                   number.cex = 0.8)
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-53-2.png)<!-- -->
+
+``` r
+  
+mcor_f <- mcor_g1  
+  
+for(i in 1:nrow(mcor_f)){
+  for(j in 1:ncol(mcor_f)){
+    if(i<=j) mcor_f[i,j] <- mcor_g2[i,j]
+  }
+}
+
+corrplot::corrplot(mcor_f, method = "color",
+                   outline = TRUE, ,
+                   addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+                   tl.cex = 1, cl.cex = 1, bg="azure2",
+                   # addCoef.col = "black",
+                   cl.ratio = 0.2,
+                   cl.length = 5,
+                   number.cex = 0.8)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-53-3.png)<!-- -->
+
+``` r
+library(ggcorrplot)
+
+# Exemplo genérico: supondo que já existam as duas matrizes
+# cor_g1 e cor_g2 com as mesmas dimensões
+vars <- colnames(mcor_g1)
+
+# Cria matriz "base" com a média das duas (só pra preencher)
+cor_comb <- (mcor_g1 + mcor_g2) / 2
+
+# Substitui a metade inferior pela do grupo 1
+cor_comb[lower.tri(cor_comb)] <- mcor_g1[lower.tri(mcor_g1)]
+# Substitui a metade superior pela do grupo 2
+cor_comb[upper.tri(cor_comb)] <- mcor_g2[upper.tri(mcor_g2)]
+
+# Gera o gráfico bonito
+ggcorrplot(
+  mcor_f,
+  # hc.order = TRUE,        # reordena por agrupamento hierárquico
+  type = "full",          # mostra a matriz inteira
+  # lab = TRUE,             # mostra valores numéricos
+  lab_size = 2.8,
+  show.legend = TRUE,
+  tl.cex = 10,
+  tl.srt = 45,
+  colors = c("#B2182B", "white", "#2166AC"),
+  outline.color = "gray40"
+) +
+  labs(
+    title = "Comparação das correlações entre os grupos",
+    subtitle = "A diagonal inferior representa o Grupo 1 (Florestal) e a superior o Grupo 2 (Agrícola)",
+    x= "Épocas (Grupo 1)",
+    y= "Épocas (Grupo 2)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->
 
 #### Por período (até e após 2018)
 
@@ -1464,7 +1529,7 @@ kgr_maps_cover |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-56-1.png)<!-- --> \###
+![](README_files/figure-gfm/unnamed-chunk-57-1.png)<!-- --> \###
 Estatísticas descritivas por classe de uso do solo
 
 ``` r
@@ -1489,7 +1554,7 @@ kgr_maps_cover |>
   )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-57-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-58-1.png)<!-- -->
 
 Retirando os top 7 usos do solo no estado.
 
@@ -1767,7 +1832,7 @@ kgr_maps_beta_cover_group |>
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-67-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-68-1.png)<!-- -->
 
 ``` r
 kgr_maps_beta_cover_group |>
@@ -1824,7 +1889,7 @@ kgr_maps_beta_cover_group |>
   )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-68-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-69-1.png)<!-- -->
 
 ``` r
 kgr_maps_beta_cover_group |>
@@ -1854,7 +1919,7 @@ kgr_maps_beta_cover_group |>
   )
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-69-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-70-1.png)<!-- -->
 
 ``` r
 # primeiro analisa xCO2
@@ -1925,7 +1990,7 @@ kgr_maps_beta_cover_group |>
   theme_ridges()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-71-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-72-1.png)<!-- -->
 
 ## MATERIAL COMPLEMENTAR
 
@@ -1943,112 +2008,6 @@ map(season,~{
   labs(x="Longitude",
        y="Latitude",
        fill="xco2",
-       title = .x) +
-  theme_bw()
-})
-#> [[1]]
-```
-
-![](README_files/figure-gfm/unnamed-chunk-72-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-9.png)<!-- -->
-
-    #> 
-    #> [[10]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-10.png)<!-- -->
-
-    #> 
-    #> [[11]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-11.png)<!-- -->
-
-    #> 
-    #> [[12]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-12.png)<!-- -->
-
-    #> 
-    #> [[13]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-13.png)<!-- -->
-
-    #> 
-    #> [[14]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-14.png)<!-- -->
-
-    #> 
-    #> [[15]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-15.png)<!-- -->
-
-    #> 
-    #> [[16]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-16.png)<!-- -->
-
-    #> 
-    #> [[17]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-17.png)<!-- -->
-
-    #> 
-    #> [[18]]
-
-![](README_files/figure-gfm/unnamed-chunk-72-18.png)<!-- -->
-
-### Padrões espaciais de Anomalia de XCO2 para o estado por estação
-
-``` r
-map(season,~{
-  kgr_maps |> 
-    filter( season_year == .x) |> 
-    ggplot(aes(x=X, y=Y)) +
-  geom_tile(aes(fill = anom_xco2)) +
-  scale_fill_viridis_c(option = "inferno") +
-  coord_equal() +
-  labs(x="Longitude",
-       y="Latitude",
-       fill="anom_xco2",
        title = .x) +
   theme_bw()
 })
@@ -2141,3 +2100,109 @@ map(season,~{
     #> [[18]]
 
 ![](README_files/figure-gfm/unnamed-chunk-73-18.png)<!-- -->
+
+### Padrões espaciais de Anomalia de XCO2 para o estado por estação
+
+``` r
+map(season,~{
+  kgr_maps |> 
+    filter( season_year == .x) |> 
+    ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = anom_xco2)) +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="anom_xco2",
+       title = .x) +
+  theme_bw()
+})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-74-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-9.png)<!-- -->
+
+    #> 
+    #> [[10]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-10.png)<!-- -->
+
+    #> 
+    #> [[11]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-11.png)<!-- -->
+
+    #> 
+    #> [[12]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-12.png)<!-- -->
+
+    #> 
+    #> [[13]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-13.png)<!-- -->
+
+    #> 
+    #> [[14]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-14.png)<!-- -->
+
+    #> 
+    #> [[15]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-15.png)<!-- -->
+
+    #> 
+    #> [[16]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-16.png)<!-- -->
+
+    #> 
+    #> [[17]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-17.png)<!-- -->
+
+    #> 
+    #> [[18]]
+
+![](README_files/figure-gfm/unnamed-chunk-74-18.png)<!-- -->
